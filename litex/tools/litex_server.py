@@ -182,7 +182,7 @@ def main():
 
     # UDP arguments
     parser.add_argument("--udp",             action="store_true",    help="Select UDP interface")
-    parser.add_argument("--udp-ip",          default="192.168.1.50", help="Set UDP remote IP address")
+    parser.add_argument("--udp-ip",          default="192.168.100.50", help="Set UDP remote IP address")
     parser.add_argument("--udp-port",        default=1234,           help="Set UDP remote port")
     parser.add_argument("--udp-scan",        action="store_true",    help="Scan network for available UDP devices.")
 

@@ -15,7 +15,7 @@ from litex.tools.remote.csr_builder import CSRBuilder
 # CommUDP ------------------------------------------------------------------------------------------
 
 class CommUDP(CSRBuilder):
-    def __init__(self, server="192.168.1.50", port=1234, csr_csv=None, debug=False):
+    def __init__(self, server="192.168.100.50", port=1234, csr_csv=None, debug=False):
         CSRBuilder.__init__(self, comm=self, csr_csv=csr_csv)
         self.server = server
         self.port   = port

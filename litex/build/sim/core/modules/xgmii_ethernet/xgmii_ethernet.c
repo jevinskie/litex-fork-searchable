@@ -135,6 +135,8 @@ void event_handler(int fd, short event, void *arg)
   if (event & EV_READ) {
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
+        fprintf(stderr, "xgmii read\n");
+
     ep->len = tapcfg_read(s->tapcfg, ep->data, ETH_LEN);
     if(ep->len < 60)
       ep->len = 60;
@@ -278,6 +280,7 @@ static int xgmii_ethernet_tick(void *sess, uint64_t time_ps)
       for(int i=0; i < s->datalen; printf("%02x ", s->databuf[i++] & 0xff));
       printf("\n%u\n", s->datalen);
       printf("Sent %u\n", s->datalen);
+          fprintf(stderr, "xgmii write\n");
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       s->datalen=0;
       g_preamble=0;

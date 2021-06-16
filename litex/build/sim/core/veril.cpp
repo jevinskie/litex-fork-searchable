@@ -58,22 +58,42 @@ extern "C" void litex_sim_tracer_dump()
 {
   static int last_enabled = 0;
   bool dump_enabled = true;
+  static int last_dump_state = -1;
+  static int dump_state = -1;
 
   if (g_sim != nullptr) {
     dump_enabled = g_sim->sim_trace != 0 ? true : false;
     if (last_enabled == 0 && dump_enabled) {
-      printf("<DUMP ON>");
+      printf("<DUMP ON>\n");
       fflush(stdout);
     } else if (last_enabled == 1 && !dump_enabled) {
-      printf("<DUMP OFF>");
+      printf("<DUMP OFF>\n");
       fflush(stdout);
     }
     last_enabled = (int) dump_enabled;
   }
 
+
+  // fprintf(stderr, "q de: %d le: %d s: %llu e: %llu now: %llu\n", dump_enabled, last_enabled, tfp_start, tfp_end, main_time);
   if (dump_enabled && tfp_start <= main_time && main_time <= tfp_end) {
+    dump_state = 0;
+    // fprintf(stderr, "Q");
     tfp->dump((vluint64_t) main_time);
   }
+  if (main_time > tfp_end) {
+    dump_state =  1;
+  }
+  if (last_dump_state != dump_state) {
+    if (dump_state == 0) {
+      printf("<DUMP START>\n");
+      fflush(stdout);
+    } else if (dump_state == 1) {
+      printf("<DUMP END>\n");
+      fflush(stdout);
+      tfp->flush();
+    }
+  }
+  last_dump_state = dump_state;
 }
 
 extern "C" int litex_sim_got_finish()

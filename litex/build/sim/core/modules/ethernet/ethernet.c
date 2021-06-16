@@ -113,6 +113,7 @@ void event_handler(int fd, short event, void *arg)
   if (event & EV_READ) {
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
+        fprintf(stderr, "eth read\n");
     ep->len = tapcfg_read(s->tapcfg, ep->data, 2000);
     if(ep->len < 60)
       ep->len = 60;
@@ -217,6 +218,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
+    fprintf(stderr, "eth write\n");
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       s->datalen=0;
     }

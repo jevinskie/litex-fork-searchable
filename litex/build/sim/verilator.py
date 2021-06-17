@@ -114,6 +114,7 @@ def _generate_sim_variables(include_paths):
 SRC_DIR = {}
 INC_DIR = {}
 TAPCFG_DIRECTORY = {}
+CFLAGS += -DVL_DEBUG
 """.format(core_directory, include, tapcfg_dir)
     tools.write_to_file("variables.mak", content)
 

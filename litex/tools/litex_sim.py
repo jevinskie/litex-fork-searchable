@@ -229,10 +229,11 @@ class SimSoC(SoCCore):
                 hw_mac     = etherbone_mac_address)
 
             # SoftCPU
-            self.add_memory_region("ethmac", self.mem_map.get("ethmac", None), 0x2000, type="io")
-            self.add_wb_slave(self.mem_regions["ethmac"].origin, self.ethmac.bus, 0x2000)
-            if self.irq.enabled:
-                self.irq.add("ethmac", use_loc_if_exists=True)
+            if self.cpu_type is not None:
+                self.add_memory_region("ethmac", self.mem_map.get("ethmac", None), 0x2000, type="io")
+                self.add_wb_slave(self.mem_regions["ethmac"].origin, self.ethmac.bus, 0x2000)
+                if self.irq.enabled:
+                    self.irq.add("ethmac", use_loc_if_exists=True)
             # HW ethernet
             self.submodules.arp  = LiteEthARP(self.ethmac, etherbone_mac_address, etherbone_ip_address, sys_clk_freq, dw=8)
             self.submodules.ip   = LiteEthIP(self.ethmac, etherbone_mac_address, etherbone_ip_address, self.arp.table, dw=8)

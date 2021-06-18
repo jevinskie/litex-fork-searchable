@@ -21,6 +21,8 @@
 #include <event2/util.h>
 #include <event2/event.h>
 
+#include <pcap/pcap.h>
+
 void litex_sim_init(void **out);
 void litex_sim_dump();
 
@@ -198,6 +200,7 @@ static void cb(int sock, short which, void *arg)
     sim_time_ps += timebase_ps;
 
     if (litex_sim_got_finish()) {
+        fprintf(stderr, "got sim finish event\n");
         event_base_loopbreak(base);
         break;
     }
@@ -207,6 +210,17 @@ static void cb(int sock, short which, void *arg)
     event_del(ev);
     evtimer_add(ev, &tv);
   }
+}
+
+static void
+signal_cb(evutil_socket_t sig, short events, void *user_data)
+{
+  struct event_base *base = (struct event_base*)user_data;
+  struct timeval delay = { 0, 0 };
+
+  fprintf(stderr, "Caught an interrupt signal; exiting\n");
+
+  event_base_loopexit(base, &delay);
 }
 
 int main(int argc, char *argv[])
@@ -230,6 +244,12 @@ int main(int argc, char *argv[])
     goto out;
   }
 
+  struct event *signal_event = evsignal_new(base, SIGINT, signal_cb, (void *)base);
+  if (!signal_event || event_add(signal_event, NULL)<0) {
+    fprintf(stderr, "Could not create/add a SIGINT event!\n");
+    return 1;
+  }
+
   litex_sim_init_cmdargs(argc, argv);
   if(RC_OK != (ret = litex_sim_initialize_all(&vsim, base)))
   {
@@ -246,6 +266,15 @@ int main(int argc, char *argv[])
   ev = event_new(base, -1, EV_PERSIST, cb, vsim);
   event_add(ev, &tv);
   event_base_dispatch(base);
+
+  fprintf(stderr, "finishing sim\n");
+
+  for(struct session_list_s *s = sesslist; s; s=s->next)
+  {
+    if(s->module->close)
+      s->module->close(s->session);
+  }
+
 #if VM_COVERAGE
   litex_sim_coverage_dump();
 #endif

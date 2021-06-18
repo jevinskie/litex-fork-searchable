@@ -10,7 +10,7 @@ $(MOD).so: $(OBJS)
 ifeq ($(UNAME_S),Darwin)
 	$(CC) $(LDFLAGS) -o $@ $^
 else
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^ -lpcap
 endif
 
 tapcfg.o: $(TAPCFG_DIRECTORY)/src/lib/tapcfg.c

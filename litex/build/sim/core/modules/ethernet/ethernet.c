@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,8 +8,11 @@
 #include <event2/util.h>
 #include <event2/event.h>
 #include <json-c/json.h>
+#include <pcap/pcap.h>
 #include "tapcfg.h"
 #include "modules.h"
+
+#define PCAP_FILENAME "./sim.pcap"
 
 struct eth_packet_s {
   char data[2000];
@@ -33,6 +37,8 @@ struct session_s {
   int insent;
   struct eth_packet_s *ethpack;
   struct event *ev;
+  pcap_t *pcap;
+  pcap_dumper_t *pcap_dumper;
 };
 
 static struct event_base *base=NULL;
@@ -165,11 +171,61 @@ static int ethernet_new(void **sess, char *args)
   tapcfg_iface_set_hwaddr(s->tapcfg, macadr, 6);
   tapcfg_iface_set_ipv4(s->tapcfg, c_tap_ip, 24);
   tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
-  free(c_tap);
   free(c_tap_ip);
 
   s->ev = event_new(base, s->fd, EV_READ | EV_PERSIST, event_handler, s);
   event_add(s->ev, &tv);
+
+  char pcap_errbuf[PCAP_ERRBUF_SIZE];
+  // int pcap_init_res = pcap_init(PCAP_CHAR_ENC_UTF_8, pcap_errbuf);
+  // if (pcap_init_res) {
+  //   fprintf(stderr, "pcap_init error: %s\n", pcap_errbuf);
+  //   goto out;
+  // }
+  fprintf(stderr, "pcappin' %s\n", c_tap);
+  s->pcap = pcap_create(c_tap, pcap_errbuf);
+  free(c_tap);
+  if (!s->pcap) {
+    fprintf(stderr, "pcap_create error: %s\n", pcap_errbuf);
+    // goto out;
+    assert(0);
+  }
+  int pcap_set_promisc_res = pcap_set_promisc(s->pcap, 1);
+  if (pcap_set_promisc_res) {
+    fprintf(stderr, "couldn't set promisc mode\n");
+    // goto out;
+    assert(0);
+  }
+  int pcap_setres_res = pcap_set_tstamp_precision(s->pcap, PCAP_TSTAMP_PRECISION_NANO);
+  if (pcap_setres_res) {
+    fprintf(stderr, "couldn't set pcap precision to nanoseconds\n");
+    // goto out;
+    assert(0);
+  }
+  int pcap_set_timeout_res = pcap_set_timeout(s->pcap, 1);
+  if (pcap_set_timeout_res) {
+    fprintf(stderr, "couldn't set pcap timeout to 1 ms\n");
+    // goto out;
+    assert(0);
+  }
+  int pcap_set_nonblock_res = pcap_setnonblock(s->pcap, 1, pcap_errbuf);
+  if (pcap_set_nonblock_res) {
+    fprintf(stderr, "couldn't set pcap to nonblocking: %s\n", pcap_errbuf);
+    // goto out;
+    assert(0);
+  }
+  int pcap_activate_res = pcap_activate(s->pcap);
+  if (pcap_activate_res) {
+    fprintf(stderr, "pcap_activate failed: %d\n", pcap_activate_res);
+    // goto out;
+    assert(0);
+  }
+  s->pcap_dumper = pcap_dump_open(s->pcap, PCAP_FILENAME);
+  if (!s->pcap_dumper) {
+    fprintf(stderr, "pcap_dump_open failed\n");
+    // goto out;
+    assert(0);
+  }
 
 out:
   *sess=(void*)s;
@@ -208,6 +264,10 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
   struct session_s *s = (struct session_s*)sess;
   struct eth_packet_s *pep;
 
+  if (s->pcap) {
+    pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
+  }
+
   if(!clk_pos_edge(&edge, *s->sys_clk)) {
     return RC_OK;
   }
@@ -244,12 +304,23 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
   return RC_OK;
 }
 
+static int ethernet_close(void *sess)
+{
+  int ret = RC_OK;
+  struct session_s *s = (struct session_s*)sess;
+  pcap_dump_flush(s->pcap_dumper);
+  pcap_dump_close(s->pcap_dumper);
+  pcap_close(s->pcap);
+  fprintf(stderr, "did teh close\n");
+  return ret;
+}
+
 static struct ext_module_s ext_mod = {
   "ethernet",
   ethernet_start,
   ethernet_new,
   ethernet_add_pads,
-  NULL,
+  ethernet_close,
   ethernet_tick
 };
 

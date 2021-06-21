@@ -43,14 +43,16 @@ extern "C" void litex_sim_init_tracer(void *vsim, long start, long end)
 #ifdef TRACE_FST
       tfp = new VerilatedFstC;
       sim->trace(tfp, 99);
-      tfp->open("sim.fst");
+      #define TRACE_FILE "sim.fst"
 #else
       tfp = new VerilatedVcdC;
-      sim->trace(tfp, 99);
-      tfp->open("sim.vcd");
+      #define TRACE_FILE "sim.vcd"
 #endif
+  sim->trace(tfp, 99);
   tfp->set_time_unit("1ps");
   tfp->set_time_resolution("1ps");
+  tfp->open(TRACE_FILE);
+#undef TRACE_FILE
   g_sim = sim;
 }
 

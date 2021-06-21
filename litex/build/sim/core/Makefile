@@ -21,6 +21,7 @@ export OBJ_DIR = $(abspath obj_dir)
 
 SRCS_SIM_ABSPATH = $(wildcard $(SRC_DIR)/*.c)
 SRCS_SIM = $(notdir $(SRCS_SIM_ABSPATH))
+SRCS_SIM := $(filter-out litex_privesc.c,$(SRCS_SIM))
 SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
 OBJS_SIM = $(SRCS_SIM:.c=.o)
 

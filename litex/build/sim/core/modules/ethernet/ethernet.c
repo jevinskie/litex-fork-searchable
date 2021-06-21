@@ -237,7 +237,7 @@ static int ethernet_new(void **sess, char *args)
   }
   s->pcap_dumper = pcap_dump_open(s->pcap, PCAP_FILENAME);
   if (!s->pcap_dumper) {
-    fprintf(stderr, "pcap_dump_open failed\n");
+    fprintf(stderr, "pcap_dump_open failed error: %s\n", pcap_geterr(s->pcap));
     // goto out;
     assert(0);
   }

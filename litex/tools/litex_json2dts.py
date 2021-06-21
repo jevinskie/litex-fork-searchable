@@ -60,17 +60,73 @@ def generate_dts(d, initrd_start=None, initrd_size=None, polling=False):
     # CPU ------------------------------------------------------------------------------------------
 
     # VexRiscv-SMP
+    # ------------
     if cpu_name == "vexriscv smp-linux":
+        # Cache description.
+        cache_desc = ""
+        if "cpu_dcache_size" in d["constants"]:
+            cache_desc += """
+                d-cache-size = <{d_cache_size}>;
+                d-cache-sets = <{d_cache_ways}>;
+                d-cache-block-size = <{d_cache_block_size}>;
+""".format(
+    d_cache_size       = d["constants"]["cpu_dcache_size"],
+    d_cache_ways       = d["constants"]["cpu_dcache_ways"],
+    d_cache_block_size = d["constants"]["cpu_dcache_block_size"])
+        if "cpu_icache_size" in d["constants"]:
+            cache_desc += """
+                i-cache-size = <{i_cache_size}>;
+                i-cache-sets = <{i_cache_ways}>;
+                i-cache-block-size = <{i_cache_block_size}>;
+""".format(
+    i_cache_size       = d["constants"]["cpu_icache_size"],
+    i_cache_ways       = d["constants"]["cpu_icache_ways"],
+    i_cache_block_size = d["constants"]["cpu_icache_block_size"])
+
+        # TLB description.
+        tlb_desc = ""
+        if "cpu_dtlb_size" in d["constants"]:
+            tlb_desc += """
+                d-tlb-size = <{d_tlb_size}>;
+                d-tlb-sets = <{d_tlb_ways}>;
+""".format(
+    d_tlb_size = d["constants"]["cpu_dtlb_size"],
+    d_tlb_ways = d["constants"]["cpu_dtlb_ways"])
+        if "cpu_itlb_size" in d["constants"]:
+            tlb_desc += """
+                i-tlb-size = <{i_tlb_size}>;
+                i-tlb-sets = <{i_tlb_ways}>;
+""".format(
+    i_tlb_size = d["constants"]["cpu_itlb_size"],
+    i_tlb_ways = d["constants"]["cpu_itlb_ways"])
+
+        # CPU(s) Count.
+        cpus = range(int(d["constants"]["config_cpu_count"]))
+
+        # CPU(s) Topology.
+        cpu_map = ""
+        if int(d["constants"]["config_cpu_count"]) > 1:
+            cpu_map += """
+            cpu-map {
+                cluster0 {"""
+            for cpu in cpus:
+                cpu_map += """
+                    core{cpu} {{
+                        cpu = <&CPU{cpu}>;
+                    }};""".format(cpu=cpu)
+            cpu_map += """
+                };
+            };"""
+
         dts += """
         cpus {{
             #address-cells = <1>;
             #size-cells    = <0>;
             timebase-frequency = <{sys_clk_freq}>;
 """.format(sys_clk_freq=d["constants"]["config_clock_frequency"])
-        cpus = range(int(d["constants"]["config_cpu_count"]))
         for cpu in cpus:
             dts += """
-            cpu@{cpu} {{
+            CPU{cpu}: cpu@{cpu} {{
                 device_type = "cpu";
                 compatible = "riscv";
                 riscv,isa = "{cpu_isa}";
@@ -78,18 +134,22 @@ def generate_dts(d, initrd_start=None, initrd_size=None, polling=False):
                 reg = <{cpu}>;
                 clock-frequency = <{sys_clk_freq}>;
                 status = "okay";
+                {cache_desc}
+                {tlb_desc}
                 L{irq}: interrupt-controller {{
                     #interrupt-cells = <0x00000001>;
                     interrupt-controller;
                     compatible = "riscv,cpu-intc";
                 }};
             }};
-""".format(cpu=cpu, irq=cpu, sys_clk_freq=d["constants"]["config_clock_frequency"], cpu_isa=d["constants"]["cpu_isa"])
+""".format(cpu=cpu, irq=cpu, sys_clk_freq=d["constants"]["config_clock_frequency"], cpu_isa=d["constants"]["cpu_isa"], cache_desc=cache_desc, tlb_desc=tlb_desc)
         dts += """
-        };
-"""
+            {cpu_map}
+        }};
+""".format(cpu_map=cpu_map)
 
-    # mor1kx
+    # Mor1kx
+    # ------
     elif cpu_name == "mor1kx":
         dts += """
         cpus {{
@@ -350,9 +410,12 @@ def generate_dts(d, initrd_start=None, initrd_size=None, polling=False):
                 gpio-controller;
                 #gpio-cells = <2>;
                 litex,direction = "in";
+                {switches_interrupt}
                 status = "disabled";
             }};
-""".format(switches_csr_base=d["csr_bases"]["switches"])
+""".format(
+    switches_csr_base  = d["csr_bases"]["switches"],
+	switches_interrupt = "" if polling else "interrupts = <{}>;".format(d["constants"]["switches_interrupt"]))
 
     # SPI ------------------------------------------------------------------------------------------
 
@@ -541,19 +604,19 @@ def generate_dts(d, initrd_start=None, initrd_size=None, polling=False):
 
     if "leds" in d["csr_bases"]:
         dts += """
-&leds {
-        litex,ngpio = <4>;
+&leds {{
+        litex,ngpio = <{ngpio}>;
         status = "okay";
-};
-"""
+}};
+""".format(ngpio=d["constants"].get('leds_ngpio', 4))
 
     if "switches" in d["csr_bases"]:
         dts += """
-&switches {
-        litex,ngpio = <4>;
+&switches {{
+        litex,ngpio = <{ngpio}>;
         status = "okay";
-};
-"""
+}};
+""".format(ngpio=d["constants"].get('switches_ngpio', 4))
 
     return dts
 

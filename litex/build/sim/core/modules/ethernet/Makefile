@@ -6,14 +6,11 @@ include $(SRC_DIR)/modules/rules.mak
 CFLAGS += -I$(TAPCFG_DIRECTORY)/src/include
 OBJS = $(MOD).o tapcfg.o taplog.o
 
-CFLAGS += -O0
-LDFLAGS += -lpcap
-
 $(MOD).so: $(OBJS)
 ifeq ($(UNAME_S),Darwin)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^ -lpcap
 else
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^
+	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^ -lpcap
 endif
 
 tapcfg.o: $(TAPCFG_DIRECTORY)/src/lib/tapcfg.c

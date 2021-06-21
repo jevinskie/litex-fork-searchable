@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <arpa/inet.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +19,9 @@
 #include "modules.h"
 
 #define PCAP_FILENAME "./sim.pcap"
+
+static const char macadr[6] = {0xaa, 0xb6, 0x24, 0x69, 0x77, 0x21};
+static unsigned char ipadr[4] = {0};
 
 struct eth_packet_s {
   char data[2000];
@@ -114,6 +119,47 @@ static int ethernet_start(void *b)
   return RC_OK;
 }
 
+#ifdef __APPLE__
+#include <arpa/inet.h>
+#include <net/ethernet.h>
+#include <netinet/if_ether.h>
+
+#define ARP_MIN_LEN (sizeof(ether_header_t) + sizeof(struct ether_arp))
+
+static void handle_arp_requests(tapcfg_t *tapcfg, const void *buf, size_t len) {
+  const uint8_t *data = (const uint8_t*)buf;
+  if (len < ARP_MIN_LEN) {
+    fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
+    return;
+  }
+  const ether_header_t *ehdr = (const ether_header_t *)data;
+  if (ehdr->ether_type != htons(ETHERTYPE_ARP)) {
+    fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, ETHERTYPE_ARP);
+    return;
+  }
+  const struct ether_arp *arp_req = (const struct ether_arp *)&data[sizeof(ether_header_t)];
+  if (memcmp(arp_req->arp_tpa, ipadr, sizeof(ipadr))) {
+    fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
+    return;
+  }
+  
+  fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
+  uint8_t reply_buf[ARP_MIN_LEN];
+  memcpy(reply_buf, data, sizeof(reply_buf));
+  ether_header_t *eth_reply_hdr = (struct ether_header_t*)reply_buf;
+  memcpy(eth_reply_hdr->ether_dhost, ehdr->ether_shost, sizeof(macadr));
+  memcpy(eth_reply_hdr->ether_shost, macadr, sizeof(macadr)); 
+  struct ether_arp *arp_reply = (struct ether_arp *)&reply_buf[sizeof(ether_header_t)];
+  arp_reply->ea_hdr.ar_op = htons(ARPOP_REPLY);
+  memcpy(arp_reply->arp_sha, macadr, sizeof(macadr));
+  memcpy(arp_reply->arp_spa, ipadr, sizeof(ipadr));
+  memcpy(arp_reply->arp_tha, arp_req->arp_sha, sizeof(macadr));
+  memcpy(arp_reply->arp_tpa, arp_req->arp_spa, sizeof(ipadr));
+  tapcfg_write(tapcfg, reply_buf, sizeof(reply_buf));
+  fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
+}
+#endif
+
 void event_handler(int fd, short event, void *arg)
 {
   struct  session_s *s = (struct session_s*)arg;
@@ -137,7 +183,6 @@ void event_handler(int fd, short event, void *arg)
   }
 }
 
-static const char macadr[6] = {0xaa, 0xb6, 0x24, 0x69, 0x77, 0x21};
 
 static int ethernet_new(void **sess, char *args)
 {
@@ -168,6 +213,11 @@ static int ethernet_new(void **sess, char *args)
     if(RC_OK != ret)
       goto out;
   }
+
+  struct in_addr ia;
+  int inet_aton_res = inet_aton(c_tap_ip, &ia);
+  assert(inet_aton_res == 1);
+  memcpy(ipadr, &ia.s_addr, sizeof(ipadr));
 
   s->tapcfg = tapcfg_init();
   tapcfg_start(s->tapcfg, c_tap, 0);
@@ -215,7 +265,9 @@ static int ethernet_new(void **sess, char *args)
   if (pcap_setres_res) {
     fprintf(stderr, "couldn't set pcap precision to nanoseconds\n");
     // goto out;
+#ifndef __APPLE__
     assert(0);
+#endif
   }
   int pcap_set_timeout_res = pcap_set_timeout(s->pcap, 1);
   if (pcap_set_timeout_res) {
@@ -293,8 +345,11 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-    fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
+#ifdef __APPLE__
+      handle_arp_requests(s->tapcfg, s->databuf, s->datalen);
+#endif
       s->datalen=0;
     }
   }

@@ -2,9 +2,11 @@ include variables.mak
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
-	CFLAGS += -I/usr/local/include/
-	LDFLAGS += -L/usr/local/lib
+	CFLAGS += -I/usr/local/include -I/opt/brew/include -I/opt/hombrew/include
+	LDFLAGS += -L/usr/local/lib -L/opt/brew/lib -L/opt/hombrew/lib
 	LDFLAGS += -lpthread -ljson-c -lm -lstdc++ -ldl -levent
+	CFLAGS += -ggdb
+	LDFLAGS += -ggdb
 else
 	CC ?= gcc
 	CFLAGS += -Wall -$(OPT_LEVEL) -ggdb $(if $(COVERAGE), -DVM_COVERAGE) $(if $(TRACE_FST), -DTRACE_FST)

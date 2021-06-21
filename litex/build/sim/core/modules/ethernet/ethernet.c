@@ -160,6 +160,7 @@ static void handle_arp_requests(struct session_s *s, const void *buf, size_t len
   struct eth_packet_s *rep = malloc(sizeof(struct eth_packet_s));
   memset(rep, 0, sizeof(struct eth_packet_s));
   rep->len = sizeof(reply_buf);
+  memcpy(rep->data, reply_buf, sizeof(reply_buf));
   if(!s->ethpack) {
     s->ethpack = rep;
   } else {

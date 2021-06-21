@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <signal.h>
 #ifndef _WIN32
@@ -23,7 +24,7 @@
 
 #include <pcap/pcap.h>
 
-void litex_sim_init(void **out);
+void litex_sim_init(void **out, uint64_t *p_sim_end_time_ps);
 void litex_sim_dump();
 
 struct session_list_s {
@@ -35,6 +36,7 @@ struct session_list_s {
 
 uint64_t timebase_ps = 1;
 uint64_t sim_time_ps = 0;
+uint64_t sim_end_time_ps = -1;
 struct session_list_s *sesslist=NULL;
 struct event_base *base=NULL;
 
@@ -73,7 +75,7 @@ static int litex_sim_initialize_all(void **sim, void *base)
     goto out;
   }
   /* Init generated */
-  litex_sim_init(&vsim);
+  litex_sim_init(&vsim, &sim_end_time_ps);
 
   /* Get pads from generated */
   ret = litex_sim_pads_get_list(&plist);
@@ -204,6 +206,12 @@ static void cb(int sock, short which, void *arg)
         event_base_loopbreak(base);
         break;
     }
+
+    if (sim_time_ps > sim_end_time_ps) {
+        fprintf(stderr, "got sim finish event\n");
+        event_base_loopbreak(base);
+        break;
+    }
   }
 
   if (!evtimer_pending(ev, NULL)) {
@@ -215,12 +223,8 @@ static void cb(int sock, short which, void *arg)
 static void
 signal_cb(evutil_socket_t sig, short events, void *user_data)
 {
-  struct event_base *base = (struct event_base*)user_data;
-  struct timeval delay = { 0, 0 };
-
   fprintf(stderr, "Caught an interrupt signal; exiting\n");
-
-  event_base_loopexit(base, &delay);
+  event_base_loopbreak((struct event_base*)user_data);
 }
 
 int main(int argc, char *argv[])

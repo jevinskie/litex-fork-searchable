@@ -34,7 +34,7 @@ extern "C" void litex_sim_init_cmdargs(int argc, char *argv[])
   Verilated::commandArgs(argc, argv);
 }
 
-extern "C" void litex_sim_init_tracer(void *vsim, long start, long end)
+extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int trace_exit)
 {
   Vsim *sim = (Vsim*)vsim;
   tfp_start = start;

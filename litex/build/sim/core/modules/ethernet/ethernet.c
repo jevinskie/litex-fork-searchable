@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <limits.h>
 #include "error.h"
 
 #include <event2/listener.h>
@@ -167,6 +171,17 @@ static int ethernet_new(void **sess, char *args)
 
   s->tapcfg = tapcfg_init();
   tapcfg_start(s->tapcfg, c_tap, 0);
+
+#ifdef __linux__
+  char sysctl_path[PATH_MAX] = {0};
+  snprintf(sysctl_path, sizeof(sysctl_path), "/proc/sys/net/ipv6/conf/%s/disable_ipv6", c_tap);
+  int sysctl_fd = open(sysctl_path, O_WRONLY);
+  assert(sysctl_fd >= 0);
+  ssize_t sysctl_write_res = write(sysctl_fd, "1", 1);
+  assert(sysctl_write_res == 1);
+  assert(!close(sysctl_fd));
+#endif
+
   s->fd = tapcfg_get_fd(s->tapcfg);
   tapcfg_iface_set_hwaddr(s->tapcfg, macadr, 6);
   tapcfg_iface_set_ipv4(s->tapcfg, c_tap_ip, 24);

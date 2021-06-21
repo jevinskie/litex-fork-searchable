@@ -130,21 +130,21 @@ static int ethernet_start(void *b)
 static void handle_arp_requests(struct session_s *s, const void *buf, size_t len) {
   const uint8_t *data = (const uint8_t*)buf;
   if (len < ARP_MIN_LEN) {
-    fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
+    // fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
     return;
   }
   const ether_header_t *ehdr = (const ether_header_t *)data;
   if (ehdr->ether_type != htons(ETHERTYPE_ARP)) {
-    fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, ETHERTYPE_ARP);
+    // fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, htons(ETHERTYPE_ARP));
     return;
   }
   const struct ether_arp *arp_req = (const struct ether_arp *)&data[sizeof(ether_header_t)];
   if (memcmp(arp_req->arp_tpa, ipadr, sizeof(ipadr))) {
-    fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
+    // fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
     return;
   }
   
-  fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
+  // fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
   uint8_t reply_buf[ARP_MIN_LEN_PADDED] = {0};
   memcpy(reply_buf, data, ARP_MIN_LEN);
   ether_header_t *eth_reply_hdr = (struct ether_header_t*)reply_buf;
@@ -168,7 +168,7 @@ static void handle_arp_requests(struct session_s *s, const void *buf, size_t len
     for(tep=s->ethpack; tep->next; tep=tep->next);
     tep->next = rep;
   }
-  fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
+  // fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
 }
 #endif
 
@@ -182,7 +182,7 @@ void event_handler(int fd, short event, void *arg)
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
     ep->len = tapcfg_read(s->tapcfg, ep->data, 2000);
-    fprintf(stderr, "eth read %d\n", (int)ep->len);
+    // fprintf(stderr, "eth read %d\n", (int)ep->len);
     if(ep->len < 60)
       ep->len = 60;
 
@@ -357,7 +357,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-      fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      // fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
 #ifdef __APPLE__
       handle_arp_requests(s, s->databuf, s->datalen);

@@ -157,7 +157,7 @@ def _compile_sim(build_name, verbose):
         print(output)
 
 def _run_sim(build_name, as_root=False, interactive=True):
-    run_script_contents = "sudo " if as_root else ""
+    run_script_contents = "litex_privesc " if as_root else ""
     run_script_contents += "obj_dir/Vsim"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True)

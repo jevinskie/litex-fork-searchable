@@ -7,7 +7,7 @@
 
 #include <cap-ng.h>
 
-void addd_ambcap(int ambcap) {
+void add_ambcap(int ambcap) {
 	int res = -1;
 
 	capng_get_caps_process();
@@ -29,8 +29,8 @@ int main(int argc,  char * const *argv) {
 		error(3, ENOENT, "must provide a binary, e.g. %s <full path to run binary>", dirname(strdup(argv[0])));
 	}
 
-	addd_ambcap(CAP_NET_ADMIN);
-	addd_ambcap(CAP_NET_RAW);
+	add_ambcap(CAP_NET_ADMIN);
+	add_ambcap(CAP_NET_RAW);
 
 	res = execv(argv[1], &argv[1]);
 	if (res) {

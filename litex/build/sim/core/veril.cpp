@@ -22,6 +22,11 @@ uint64_t tfp_end;
 uint64_t main_time = 0;
 Vsim *g_sim = nullptr;
 
+static int g_last_dump_state = -1;
+static int g_dump_state = -1;
+static int g_trace_exit = 0;
+
+
 extern "C" void litex_sim_eval(void *vsim, uint64_t time_ps)
 {
   Vsim *sim = (Vsim*)vsim;
@@ -39,6 +44,7 @@ extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int trac
   Vsim *sim = (Vsim*)vsim;
   tfp_start = start;
   tfp_end = end >= 0 ? end : UINT64_MAX;
+  g_trace_exit = trace_exit;
   Verilated::traceEverOn(true);
 #ifdef TRACE_FST
       tfp = new VerilatedFstC;
@@ -60,8 +66,6 @@ extern "C" void litex_sim_tracer_dump()
 {
   static int last_enabled = 0;
   bool dump_enabled = true;
-  static int last_dump_state = -1;
-  static int dump_state = -1;
 
   if (g_sim != nullptr) {
     dump_enabled = g_sim->sim_trace != 0 ? true : false;
@@ -78,29 +82,29 @@ extern "C" void litex_sim_tracer_dump()
 
   // fprintf(stderr, "q de: %d le: %d s: %llu e: %llu now: %llu\n", dump_enabled, last_enabled, tfp_start, tfp_end, main_time);
   if (dump_enabled && tfp_start <= main_time && main_time <= tfp_end) {
-    dump_state = 0;
+    g_dump_state = 0;
     // fprintf(stderr, "Q");
     tfp->dump((vluint64_t) main_time);
   }
   if (main_time > tfp_end) {
-    dump_state =  1;
+    g_dump_state =  1;
   }
-  if (last_dump_state != dump_state) {
-    if (dump_state == 0) {
+  if (g_last_dump_state != g_dump_state) {
+    if (g_dump_state == 0) {
       printf("<DUMP START>\n");
       fflush(stdout);
-    } else if (dump_state == 1) {
+    } else if (g_dump_state == 1) {
       printf("<DUMP END>\n");
       fflush(stdout);
       tfp->flush();
     }
   }
-  last_dump_state = dump_state;
+  g_last_dump_state = g_dump_state;
 }
 
 extern "C" int litex_sim_got_finish()
 {
-  return Verilated::gotFinish();
+  return Verilated::gotFinish() || (g_trace_exit && g_last_dump_state == 1);
 }
 
 #if VM_COVERAGE

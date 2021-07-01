@@ -179,14 +179,14 @@ report_sdc -ignored -file "sdc_constraints.rpt"
 foreach_in_collection op [get_available_operating_conditions] {
   set_operating_conditions $op
 
-  report_timing -setup -npaths 20 -detail full_path -multi_corner \
+  report_timing -setup -npaths 128 -detail full_path -multi_corner \
     -panel_name "Critical paths"
 
-  report_timing -setup -npaths 20 -detail full_path -multi_corner \
+  report_timing -setup -npaths 128 -detail full_path -multi_corner \
     -file "timing_paths_full_$op.rpt" \
     -panel_name "Critical paths"
 
-  report_timing -setup -npaths 20 -detail full_path -multi_corner \
+  report_timing -setup -npaths 128 -detail full_path -multi_corner \
     -file "timing_paths_html_$op.html" \
     -panel_name "Critical paths for $op"
 }

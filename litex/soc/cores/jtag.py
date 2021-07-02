@@ -11,7 +11,38 @@ from migen.genlib.cdc import AsyncResetSynchronizer
 
 from litex.soc.interconnect import stream
 
-# Altera Atlantic JTAG -----------------------------------------------------------------------------
+# Altera JTAG --------------------------------------------------------------------------------------
+
+class AlteraJTAG(Module):
+    def __init__(self, chain=1):
+        self.reset   = Signal()
+        self.capture = Signal()
+        self.shift   = Signal()
+        self.update  = Signal()
+
+        self.tck = Signal()
+        self.tms = Signal()
+        self.tdi = Signal()
+        self.tdo = Signal()
+
+        # # #
+
+        self.specials += Instance("sld_virtual_jtag",
+            p_sld_auto_instance_index = "NO",
+            p_sld_instance_index = chain - 1,
+
+            o_jtag_state_tlr    = self.reset,
+            o_virutal_state_cdr = self.capture,
+            o_virtual_state_sdr = self.shift,
+            o_virtual_state_udr = self.update,
+
+            o_tck = self.tck,
+            o_tms = self.tms,
+            o_tdi = self.tdi,
+            i_tdo = self.tdo,
+        )
+
+# Altera Atlantic JTAG (UART over JTAG) ------------------------------------------------------------
 
 class JTAGAtlantic(Module):
     def __init__(self):
@@ -123,6 +154,8 @@ class JTAGPHY(Module):
                 jtag = S7JTAG(chain=chain)
             elif device[:4] in ["xcku", "xcvu"]:
                 jtag = USJTAG(chain=chain)
+            elif device[:3].lower() in ["10m"]:
+                jtag = AlteraJTAG(chain=chain)
             else:
                 raise NotImplementedError
             self.submodules.jtag = jtag

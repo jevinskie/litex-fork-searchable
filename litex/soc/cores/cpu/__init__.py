@@ -27,7 +27,7 @@ class CPU(Module):
         pass
 
 class CPUNone(CPU):
-    variants             = ["standard"]
+    variants             = ["minimal", "standard"]
     data_width           = 32
     endianness           = "little"
     reset_address        = 0x00000000

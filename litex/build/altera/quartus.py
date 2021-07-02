@@ -158,10 +158,9 @@ then
     quartus_cpf -c {build_name}.sof {build_name}.rbf
 fi
 """
-    script_contents = script_contents.format(build_name=build_name)
+    script_contents = script_contents.format(build_name=build_name, timing_tcl_file=timing_tcl_file)
     tools.write_to_file(script_file, script_contents, force_unix=True)
 
-    timing_tcl_file = "timing-reports.tcl"
     timing_tcl_contents = """
 package require cmdline
 set options {\

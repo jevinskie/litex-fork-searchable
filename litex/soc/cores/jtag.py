@@ -80,11 +80,16 @@ class XilinxJTAG(Module):
         self.capture = Signal()
         self.shift   = Signal()
         self.update  = Signal()
+        self.drck    = Signal()
+        self.runtest = Signal()
+        self.sel     = Signal()
 
         self.tck = Signal()
         self.tms = Signal()
         self.tdi = Signal()
         self.tdo = Signal()
+
+        assert 1 <= chain <= 4
 
         # # #
 
@@ -95,6 +100,9 @@ class XilinxJTAG(Module):
             o_CAPTURE = self.capture,
             o_SHIFT   = self.shift,
             o_UPDATE  = self.update,
+            o_DRCK    = self.drck,
+            o_RUNTEST = self.runtest,
+            o_SEL     = self.sel,
 
             o_TCK = self.tck,
             o_TMS = self.tms,

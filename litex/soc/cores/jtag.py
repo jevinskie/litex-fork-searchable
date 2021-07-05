@@ -81,7 +81,7 @@ class AlteraJTAG(Module):
             o_tckutap = self.tck,
             o_tmsutap = self.tms,
             o_tdiutap = self.tdi,
-            i_tdoutap = self.tdo,
+            i_tdouser = self.tdo,
         )
 
 

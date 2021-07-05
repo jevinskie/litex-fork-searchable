@@ -64,8 +64,8 @@ class AlteraPlatform(GenericPlatform):
         #     Signal(name="altera_reserved_tdo", reset=None, reset_less=True),
         # ])
         self.add_extension([
-            ("altera_reserved_tms", 0, Pins(1)),
-            ("altera_reserved_tck", 0, Pins(1)),
-            ("altera_reserved_tdi", 0, Pins(1)),
-            ("altera_reserved_tdo", 0, Pins(1)),
+            ("altera_reserved_tms", 0, Pins("altera_reserved_tms")),
+            ("altera_reserved_tck", 0, Pins("altera_reserved_tck")),
+            ("altera_reserved_tdi", 0, Pins("altera_reserved_tdi")),
+            ("altera_reserved_tdo", 0, Pins("altera_reserved_tdo")),
         ])

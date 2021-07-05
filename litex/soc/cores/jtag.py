@@ -11,14 +11,16 @@ from migen.genlib.cdc import AsyncResetSynchronizer
 
 from litex.soc.interconnect import stream
 
-# Altera JTAG --------------------------------------------------------------------------------------
+# Altera VJTAG -------------------------------------------------------------------------------------
 
-class AlteraJTAG(Module):
+class AlteraVJTAG(Module):
     def __init__(self, chain=1):
         self.reset   = Signal()
         self.capture = Signal()
         self.shift   = Signal()
         self.update  = Signal()
+        #
+        self.runtest = Signal()
 
         self.tck = Signal()
         self.tms = Signal()
@@ -30,17 +32,62 @@ class AlteraJTAG(Module):
         self.specials += Instance("sld_virtual_jtag",
             p_sld_auto_instance_index = "NO",
             p_sld_instance_index = chain - 1,
+            # p_sld_ir_width = 1,
+            # p_sld_sim_n_scan = 0,
+            # p_sld_sim_action = "UNUSED",
+            # p_sld_sim_total_length = 0,
 
             o_jtag_state_tlr    = self.reset,
             o_virutal_state_cdr = self.capture,
             o_virtual_state_sdr = self.shift,
             o_virtual_state_udr = self.update,
+            #
+            o_jtag_state_rti    = self.runtest,
 
             o_tck = self.tck,
             o_tms = self.tms,
             o_tdi = self.tdi,
             i_tdo = self.tdo,
         )
+
+class AlteraJTAG(Module):
+    def __init__(self, primitive, chain=1):
+        self.reset   = Signal()
+        self.capture = Signal()
+        self.shift   = Signal()
+        self.update  = Signal()
+        #
+        self.runtest = Signal()
+        self.sel     = Signal()
+
+        self.tck = Signal()
+        self.tms = Signal()
+        self.tdi = Signal()
+        self.tdo = Signal()
+
+        assert 1 <= chain <= 1
+
+        # # #
+
+        self.specials += Instance(primitive,
+            # o_???          = self.reset,
+            o_clkdruser      = self.capture,
+            o_shiftuser      = self.shift,
+            o_updateuser     = self.update,
+            #
+            o_runidleuser    = self.runtest,
+            o_usr1user       = self.sel,
+
+            o_tckutap = self.tck,
+            o_tmsutap = self.tms,
+            o_tdiutap = self.tdi,
+            i_tdoutap = self.tdo,
+        )
+
+
+class MAX10JTAG(AlteraJTAG):
+    def __init__(self, *args, **kwargs):
+        AlteraJTAG.__init__(self, primitive="fiftyfivenm_jtag", *args, **kwargs)
 
 # Altera Atlantic JTAG (UART over JTAG) ------------------------------------------------------------
 
@@ -80,8 +127,9 @@ class XilinxJTAG(Module):
         self.capture = Signal()
         self.shift   = Signal()
         self.update  = Signal()
-        self.drck    = Signal()
+        #
         self.runtest = Signal()
+        self.drck    = Signal()
         self.sel     = Signal()
 
         self.tck = Signal()
@@ -100,8 +148,9 @@ class XilinxJTAG(Module):
             o_CAPTURE = self.capture,
             o_SHIFT   = self.shift,
             o_UPDATE  = self.update,
-            o_DRCK    = self.drck,
+            #
             o_RUNTEST = self.runtest,
+            o_DRCK    = self.drck,
             o_SEL     = self.sel,
 
             o_TCK = self.tck,

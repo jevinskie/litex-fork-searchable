@@ -65,10 +65,10 @@ class AlteraJTAG(Module):
         self.tdi = Signal()
         self.tdo = Signal()
 
-        self.real_tck = rtck = Signal()
-        self.real_tms = rtms = Signal()
-        self.real_tdi = rtdi = Signal()
-        self.real_tdo = rtdo = Signal()
+        self.altera_reserved_tck = rtck = Signal()
+        self.altera_reserved_tms = rtms = Signal()
+        self.altera_reserved_tdi = rtdi = Signal()
+        self.altera_reserved_tdo = rtdo = Signal()
 
         assert 1 <= chain <= 1
 

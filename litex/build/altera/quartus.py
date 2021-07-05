@@ -152,7 +152,7 @@ def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, 
 def _build_quartus_ini():
     ini = []
 
-    ini += 'vqmo_third_party_encrypted_core_support = 1'
+    ini.append("vqmo_third_party_encrypted_core_support = 1")
 
     # Generate quartus.ini
     tools.write_to_file("quartus.ini", "\n".join(ini))

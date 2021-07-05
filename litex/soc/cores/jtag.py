@@ -88,10 +88,10 @@ class AlteraJTAG(Module):
             o_tdiutap = self.tdi,
             i_tdouser = self.tdo,
 
-            i_altera_reserved_tms = rtms,
-            i_altera_reserved_tck = rtck,
-            i_altera_reserved_tdi = rtdi,
-            o_altera_reserved_tdo = rtdo,
+            i_tms = rtms,
+            i_tck = rtck,
+            i_tdi = rtdi,
+            o_tdo = rtdo,
         )
 
         self.comb += [

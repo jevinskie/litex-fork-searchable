@@ -147,6 +147,16 @@ def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, 
     # Generate .qsf
     tools.write_to_file("{}.qsf".format(build_name), "\n".join(qsf))
 
+# General Config (quartus.ini) ---------------------------------------------------------------------
+
+def _build_quartus_ini():
+    ini = []
+
+    ini += 'vqmo_third_party_encrypted_core_support = 1'
+
+    # Generate quartus.ini
+    tools.write_to_file("quartus.ini", "\n".join(ini))
+
 # Script -------------------------------------------------------------------------------------------
 
 def _build_script(build_name, create_rbf):
@@ -161,6 +171,7 @@ def _build_script(build_name, create_rbf):
 quartus_map --read_settings_files=on  --write_settings_files=off {build_name} -c {build_name}
 quartus_fit --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
 quartus_asm --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
+quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist.vqm
 quartus_sta {build_name} -c {build_name}
 quartus_sta -t {timing_tcl_file} -project {build_name}
 """
@@ -275,6 +286,8 @@ class AlteraQuartusToolchain:
             named_pc                = named_pc,
             build_name              = build_name,
             additional_qsf_commands = self.additional_qsf_commands)
+
+        _build_quartus_ini()
 
         # Generate build script
         script = _build_script(build_name, platform.create_rbf)

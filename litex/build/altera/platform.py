@@ -7,7 +7,7 @@
 
 import os
 
-from litex.build.generic_platform import GenericPlatform
+from litex.build.generic_platform import *
 from litex.build.altera import common, quartus
 
 # AlteraPlatform -----------------------------------------------------------------------------------
@@ -47,3 +47,25 @@ class AlteraPlatform(GenericPlatform):
         if hasattr(to, "p"):
             to = to.p
         self.toolchain.add_false_path_constraint(self, from_, to)
+
+    def add_reserved_jtag_decls(self):
+        # self.add_extension([
+        #     ("altera_jtag_reserved", 0,
+        #         Subsignal("altera_reserved_tms", Pins("Y7"), IOStandard("2.5 V")),
+        #         Subsignal("altera_reserved_tck", Pins("Y8"), IOStandard("2.5 V")),
+        #         Subsignal("altera_reserved_tdi", Pins("AB2"), IOStandard("2.5 V")),
+        #         Subsignal("altera_reserved_tdo", Pins("AB3"), IOStandard("2.5 V")),
+        #     ),
+        # ])
+        # self.add_extension([
+        #     Signal(name="altera_reserved_tms", reset=None, reset_less=True),
+        #     Signal(name="altera_reserved_tck", reset=None, reset_less=True),
+        #     Signal(name="altera_reserved_tdi", reset=None, reset_less=True),
+        #     Signal(name="altera_reserved_tdo", reset=None, reset_less=True),
+        # ])
+        self.add_extension([
+            ("altera_reserved_tms", 0, Pins(1)),
+            ("altera_reserved_tck", 0, Pins(1)),
+            ("altera_reserved_tdi", 0, Pins(1)),
+            ("altera_reserved_tdo", 0, Pins(1)),
+        ])

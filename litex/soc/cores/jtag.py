@@ -51,7 +51,7 @@ class AlteraVJTAG(Module):
         )
 
 class AlteraJTAG(Module):
-    def __init__(self, primitive, chain=1):
+    def __init__(self, primitive: str, reserved_pads: Record, chain=1):
         self.reset   = Signal()
         self.capture = Signal()
         self.shift   = Signal()
@@ -64,6 +64,11 @@ class AlteraJTAG(Module):
         self.tms = Signal()
         self.tdi = Signal()
         self.tdo = Signal()
+
+        self.real_tck = rtck = Signal()
+        self.real_tms = rtms = Signal()
+        self.real_tdi = rtdi = Signal()
+        self.real_tdo = rtdo = Signal()
 
         assert 1 <= chain <= 1
 
@@ -82,12 +87,25 @@ class AlteraJTAG(Module):
             o_tmsutap = self.tms,
             o_tdiutap = self.tdi,
             i_tdouser = self.tdo,
+
+            i_altera_reserved_tms = rtms,
+            i_altera_reserved_tck = rtck,
+            i_altera_reserved_tdi = rtdi,
+            o_altera_reserved_tdo = rtdo,
         )
+
+        self.comb += [
+            rtms.eq(reserved_pads.altera_reserved_tms),
+            rtck.eq(reserved_pads.altera_reserved_tck),
+            rtdi.eq(reserved_pads.altera_reserved_tdi),
+            reserved_pads.altera_reserved_tdo.eq(rtdo),
+        ]
+
 
 
 class MAX10JTAG(AlteraJTAG):
-    def __init__(self, *args, **kwargs):
-        AlteraJTAG.__init__(self, primitive="fiftyfivenm_jtag", *args, **kwargs)
+    def __init__(self, reserved_pads: Record, *args, **kwargs):
+        AlteraJTAG.__init__(self, "fiftyfivenm_jtag", reserved_pads, *args, **kwargs)
 
 # Altera Atlantic JTAG (UART over JTAG) ------------------------------------------------------------
 

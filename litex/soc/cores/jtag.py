@@ -14,8 +14,23 @@ from litex.soc.interconnect import stream
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
-    def __init__(self, tms: Signal, tck_domain: ClockDomain):
+    def __init__(self, tms: Signal, jtag_clk: Signal, jtag_rst: Signal):
         self.submodules.fsm = fsm = FSM()
+        # self.clock_domains.cd_jtag = cd_jtag = tck_domain
+        self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
+        # self.comb += cd_jtag.clk.eq(tck_domain.clk)
+        # self.comb += cd_jtag.rst.eq(tck_domain.rst)
+        # self.comb += jtag_clk.eq(cd_jtag.clk)
+        # self.comb += jtag_rst.eq(cd_jtag.rst)
+        self.comb += [
+            ClockSignal('jtag').eq(jtag_clk),
+            ResetSignal('jtag').eq(jtag_rst),
+        ]
+
+        self.foo = foo = Signal(8)
+        self.bar = bar = Signal(16)
+        self.sync += foo.eq(foo + 1)
+        self.sync.jtag += bar.eq(bar + 1)
 
         self.test_logic_reset = tlr = Signal()
         fsm.act('test_logic_reset',
@@ -101,6 +116,11 @@ class JTAGTAPFSM(Module):
             ui.eq(1),
             NextState('run_test_idle')
         )
+
+
+    def finalize(self, *args, **kwargs):
+        super().finalize(*args, **kwargs)
+        print()
 
 # Altera VJTAG -------------------------------------------------------------------------------------
 

@@ -71,7 +71,7 @@ class JTAGTAPFSM(Module):
         self.update_dr = ud = Signal()
         fsm.act('update_dr',
             ud.eq(1),
-            NextState('run_test_idle')
+            If(~tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
         # IR
@@ -108,7 +108,7 @@ class JTAGTAPFSM(Module):
         self.update_ir = ui = Signal()
         fsm.act('update_ir',
             ui.eq(1),
-            NextState('run_test_idle')
+            If(~tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
 

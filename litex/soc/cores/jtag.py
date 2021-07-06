@@ -71,7 +71,7 @@ class AlteraJTAG(Module):
         self.altera_reserved_tdo = rtdo = Signal()
 
         # inputs
-        self.tdoutap = tdoutap = Signal()
+        # self.tdoutap = tdoutap = Signal()
         self.tdouser = tdouser = Signal()
         self.tmscore = tmscore = Signal()
         self.tckcore = tckcore = Signal()
@@ -100,7 +100,7 @@ class AlteraJTAG(Module):
 
 
             # etc?
-            i_tdoutap = tdoutap,
+#            i_tdoutap = tdoutap,
             i_tdouser = tdouser,
             i_tmscore = tmscore,
             i_tckcore = tckcore,

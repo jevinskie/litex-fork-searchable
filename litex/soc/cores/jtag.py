@@ -21,13 +21,10 @@ class JTAGTAPFSM(Module):
             ResetSignal('jtag').eq(jtag_rst),
         ]
 
-        # self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag)
         self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)
 
-        self.foo = foo = Signal(8)
-        self.bar = bar = Signal(16)
-        self.sync += foo.eq(foo + 1)
-        self.sync.jtag += bar.eq(bar + 1)
+        self.tck_cnt = tck_cnt = Signal(16)
+        self.sync.jtag += tck_cnt.eq(tck_cnt + 1)
 
         self.test_logic_reset = tlr = Signal()
         fsm.act('test_logic_reset',
@@ -160,12 +157,13 @@ class AlteraVJTAG(Module):
 
 class AlteraJTAG(Module):
     def __init__(self, primitive: str, reserved_pads: Record, chain=1):
-        self.reset   = reset   = Signal()
-        self.capture = capture = Signal()
+        self.reset   = reset   = Signal() # FIXME
+        self.capture = capture = Signal() # FIXME
         self.shift   = shift   = Signal()
         self.update  = update  = Signal()
         #
         self.runtest = runtest = Signal()
+        self.drck    = drck    = Signal()
         self.sel     = sel     = Signal()
 
         self.tck = tck = Signal()
@@ -199,11 +197,12 @@ class AlteraJTAG(Module):
 
         self.specials += Instance(primitive,
             # o_???          = reset,
-            o_clkdruser      = capture,
+            # o_???          = capture,
             o_shiftuser      = shift,
             o_updateuser     = update,
             #
             o_runidleuser    = runtest,
+            o_clkdruser      = drck,
             o_usr1user       = sel,
 
 

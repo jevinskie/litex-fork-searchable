@@ -15,17 +15,14 @@ from litex.soc.interconnect import stream
 
 class JTAGTAPFSM(Module):
     def __init__(self, tms: Signal, jtag_clk: Signal, jtag_rst: Signal):
-        self.submodules.fsm = fsm = FSM()
-        # self.clock_domains.cd_jtag = cd_jtag = tck_domain
         self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
-        # self.comb += cd_jtag.clk.eq(tck_domain.clk)
-        # self.comb += cd_jtag.rst.eq(tck_domain.rst)
-        # self.comb += jtag_clk.eq(cd_jtag.clk)
-        # self.comb += jtag_rst.eq(cd_jtag.rst)
         self.comb += [
             ClockSignal('jtag').eq(jtag_clk),
             ResetSignal('jtag').eq(jtag_rst),
         ]
+
+        # self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag)
+        self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)
 
         self.foo = foo = Signal(8)
         self.bar = bar = Signal(16)

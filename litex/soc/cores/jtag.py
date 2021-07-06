@@ -11,6 +11,64 @@ from migen.genlib.cdc import AsyncResetSynchronizer
 
 from litex.soc.interconnect import stream
 
+# JTAG TAP FSM -------------------------------------------------------------------------------------
+
+class JTAGTAPFSM(Module):
+    def __init__(self, tms: Signal, tck_domain: ClockDomain):
+        self.fsm = fsm = FSM()
+        fsm.act('test_logic_reset',
+            If(~tms, NextState('run_test_idle'))
+        )
+        fsm.act('run_test_idle',
+            If(tms, NextState('select_dr_scan'))
+        )
+
+        # DR
+        fsm.act('select_dr_scan',
+            If(~tms, NextState('capture_dr')).Else(NextState('select_ir_scan'))
+        )
+        fsm.act('capture_dr',
+            If(~tms, NextState('shift_dr')).Else(NextState('exit1_dr'))
+        )
+        fsm.act('shift_dr',
+            If(tms, NextState('exit1_dr'))
+        )
+        fsm.act('exit1_dr',
+            If(~tms, NextState('pause_dr')).Else(NextState('udate_dr'))
+        )
+        fsm.act('pause_dr',
+            If(tms, NextState('exit2_dr'))
+        )
+        fsm.act('exit2_dr',
+            If(tms, NextState('update_dr')).Else(NextState('shift_dr'))
+        )
+        fsm.act('update_dr',
+            NextState('run_test_idle')
+        )
+
+        # IR
+        fsm.act('select_ir_scan',
+            If(~tms, NextState('capture_ir')).Else(NextState('test_logic_reset'))
+        )
+        fsm.act('capture_ir',
+            If(~tms, NextState('shift_ir')).Else(NextState('exit1_ir'))
+        )
+        fsm.act('shift_ir',
+            If(tms, NextState('exit1_ir'))
+        )
+        fsm.act('exit1_ir',
+            If(~tms, NextState('pause_ir')).Else(NextState('update_ir'))
+        )
+        fsm.act('pause_ir',
+            If(tms, NextState('exit2_ir'))
+        )
+        fsm.act('exit2_ir',
+            If(tms, NextState('update_ir')).Else(NextState('shift_ir'))
+        )
+        fsm.act('update_ir',
+            NextState('run_test_idle')
+        )
+
 # Altera VJTAG -------------------------------------------------------------------------------------
 
 class AlteraVJTAG(Module):
@@ -71,7 +129,7 @@ class AlteraJTAG(Module):
         self.altera_reserved_tdo = rtdo = Signal()
 
         # inputs
-        # self.tdoutap = tdoutap = Signal()
+        # self.tdoutap = tdoutap = Signal() # fails synth on max10
         self.tdouser = tdouser = Signal()
         self.tmscore = tmscore = Signal()
         self.tckcore = tckcore = Signal()
@@ -100,7 +158,7 @@ class AlteraJTAG(Module):
 
 
             # etc?
-#            i_tdoutap = tdoutap,
+            # i_tdoutap = tdoutap, # fails synth on max20
             i_tdouser = tdouser,
             i_tmscore = tmscore,
             i_tckcore = tckcore,

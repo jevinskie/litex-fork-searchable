@@ -52,42 +52,68 @@ class AlteraVJTAG(Module):
 
 class AlteraJTAG(Module):
     def __init__(self, primitive: str, reserved_pads: Record, chain=1):
-        self.reset   = Signal()
-        self.capture = Signal()
-        self.shift   = Signal()
-        self.update  = Signal()
+        self.reset   = reset   = Signal()
+        self.capture = capture = Signal()
+        self.shift   = shift   = Signal()
+        self.update  = update  = Signal()
         #
-        self.runtest = Signal()
-        self.sel     = Signal()
+        self.runtest = runtest = Signal()
+        self.sel     = sel     = Signal()
 
-        self.tck = Signal()
-        self.tms = Signal()
-        self.tdi = Signal()
-        self.tdo = Signal()
+        self.tck = tck = Signal()
+        self.tms = tms = Signal()
+        self.tdi = tdi = Signal()
+        self.tdo = tdo = Signal()
 
         self.altera_reserved_tck = rtck = Signal()
         self.altera_reserved_tms = rtms = Signal()
         self.altera_reserved_tdi = rtdi = Signal()
         self.altera_reserved_tdo = rtdo = Signal()
 
+        # inputs
+        self.tdoutap = tdoutap = Signal()
+        self.tdouser = tdouser = Signal()
+        self.tmscore = tmscore = Signal()
+        self.tckcore = tckcore = Signal()
+        self.tdicore = tdicore = Signal()
+        self.corectl = corectl = Signal()
+        self.ntdopinena = ntdopinena = Signal()
+
+        # outputs
+        self.tmsutap = tmsutap = Signal()
+        self.tckutap = tckutap = Signal()
+        self.tdiutap = tdiutap = Signal()
+        self.tdocore = tdocore = Signal()
+
         assert 1 <= chain <= 1
 
         # # #
 
         self.specials += Instance(primitive,
-            # o_???          = self.reset,
-            o_clkdruser      = self.capture,
-            o_shiftuser      = self.shift,
-            o_updateuser     = self.update,
+            # o_???          = reset,
+            o_clkdruser      = capture,
+            o_shiftuser      = shift,
+            o_updateuser     = update,
             #
-            o_runidleuser    = self.runtest,
-            o_usr1user       = self.sel,
+            o_runidleuser    = runtest,
+            o_usr1user       = sel,
 
-            o_tckutap = self.tck,
-            o_tmsutap = self.tms,
-            o_tdiutap = self.tdi,
-            i_tdouser = self.tdo,
 
+            # etc?
+            i_tdoutap = tdoutap,
+            i_tdouser = tdouser,
+            i_tmscore = tmscore,
+            i_tckcore = tckcore,
+            i_tdicore = tdicore,
+            i_corectl = corectl,
+            i_ntdopinena = ntdopinena,
+
+            o_tmsutap = tmsutap,
+            o_tckutap = tckutap,
+            o_tdiutap = tdiutap,
+            o_tdocore = tdocore,
+
+            # reserved pins
             i_tms = rtms,
             i_tck = rtck,
             i_tdi = rtdi,
@@ -99,6 +125,13 @@ class AlteraJTAG(Module):
             rtck.eq(reserved_pads.altera_reserved_tck),
             rtdi.eq(reserved_pads.altera_reserved_tdi),
             reserved_pads.altera_reserved_tdo.eq(rtdo),
+        ]
+
+        self.comb += [
+            tck.eq(tckutap),
+            tms.eq(tmsutap),
+            tdi.eq(tdiutap),
+            tdouser.eq(tdo),
         ]
 
 

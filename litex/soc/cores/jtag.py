@@ -166,10 +166,10 @@ class AlteraJTAG(Module):
         self.drck    = drck    = Signal()
         self.sel     = sel     = Signal()
 
-        self.tck = tck = Signal()
-        self.tms = tms = Signal()
-        self.tdi = tdi = Signal()
-        self.tdo = tdo = Signal()
+        # self.tck = tck = Signal()
+        # self.tms = tms = Signal()
+        # self.tdi = tdi = Signal()
+        # self.tdo = tdo = Signal()
 
         self.altera_reserved_tck = rtck = Signal()
         self.altera_reserved_tms = rtms = Signal()
@@ -178,7 +178,7 @@ class AlteraJTAG(Module):
 
         # inputs
         # self.tdoutap = tdoutap = Signal() # fails synth on max10
-        # self.tdouser = tdouser = Signal()
+        self.tdouser = tdouser = Signal()
         self.tmscore = tmscore = Signal()
         self.tckcore = tckcore = Signal()
         self.tdicore = tdicore = Signal()
@@ -208,7 +208,7 @@ class AlteraJTAG(Module):
 
             # etc?
             # i_tdoutap = tdoutap, # fails synth on max20
-            # i_tdouser = tdouser,
+            i_tdouser = tdouser,
             i_tmscore = tmscore,
             i_tckcore = tckcore,
             i_tdicore = tdicore,

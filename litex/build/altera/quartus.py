@@ -155,7 +155,7 @@ def _build_quartus_ini():
     ini.append("vqmo_third_party_encrypted_core_support = 1")
 
     # Generate quartus.ini
-    tools.write_to_file("quartus.ini", "\n".join(ini))
+    tools.write_to_file("quartus.ini", "\n".join(ini) + "\n")
 
 # Script -------------------------------------------------------------------------------------------
 
@@ -168,6 +168,7 @@ def _build_script(build_name, create_rbf):
         script_file = "build_" + build_name + ".sh"
     timing_tcl_file = "timing-reports.tcl"
     script_contents += """
+set -e -u -x -o pipefail
 quartus_map --read_settings_files=on  --write_settings_files=off {build_name} -c {build_name}
 quartus_fit --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
 quartus_asm --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}

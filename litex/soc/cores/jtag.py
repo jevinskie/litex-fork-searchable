@@ -111,11 +111,6 @@ class JTAGTAPFSM(Module):
             If(tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
-
-    def finalize(self, *args, **kwargs):
-        super().finalize(*args, **kwargs)
-        print()
-
 # Altera VJTAG -------------------------------------------------------------------------------------
 
 class AlteraVJTAG(Module):

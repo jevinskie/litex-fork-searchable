@@ -178,12 +178,12 @@ class AlteraJTAG(Module):
 
         # inputs
         # self.tdoutap = tdoutap = Signal() # fails synth on max10
-        self.tdouser = tdouser = Signal()
+        # self.tdouser = tdouser = Signal()
         self.tmscore = tmscore = Signal()
         self.tckcore = tckcore = Signal()
         self.tdicore = tdicore = Signal()
-        self.corectl = corectl = Signal()
-        self.ntdopinena = ntdopinena = Signal()
+        # self.corectl = corectl = Signal()
+        # self.ntdopinena = ntdopinena = Signal()
 
         # outputs
         self.tmsutap = tmsutap = Signal()
@@ -208,12 +208,12 @@ class AlteraJTAG(Module):
 
             # etc?
             # i_tdoutap = tdoutap, # fails synth on max20
-            i_tdouser = tdouser,
+            # i_tdouser = tdouser,
             i_tmscore = tmscore,
             i_tckcore = tckcore,
             i_tdicore = tdicore,
-            i_corectl = corectl,
-            i_ntdopinena = ntdopinena,
+            # i_corectl = corectl,
+            # i_ntdopinena = ntdopinena,
 
             o_tmsutap = tmsutap,
             o_tckutap = tckutap,
@@ -234,12 +234,12 @@ class AlteraJTAG(Module):
             reserved_pads.altera_reserved_tdo.eq(rtdo),
         ]
 
-        self.comb += [
-            tck.eq(tckutap),
-            tms.eq(tmsutap),
-            tdi.eq(tdiutap),
-            tdouser.eq(tdo),
-        ]
+        # self.comb += [
+            # tck.eq(tckcore),
+            # tms.eq(tmscore),
+            # tdi.eq(tdicore),
+            # tdocore.eq(tdo),
+        # ]
 
 
 

@@ -18,8 +18,9 @@ class JTAGTAPFSM(Module):
         self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
         self.comb += [
             ClockSignal('jtag').eq(jtag_clk),
-            ResetSignal('jtag').eq(jtag_rst),
+            # ResetSignal('jtag').eq(jtag_rst),
         ]
+        self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
 
         self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)
 
@@ -294,6 +295,8 @@ class XilinxJTAG(Module):
         self.tdo = Signal()
 
         assert 1 <= chain <= 4
+
+        self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck, ResetSignal("sys"))
 
         # # #
 

@@ -150,6 +150,7 @@ class AlteraVJTAG(Module):
             i_tdo = self.tdo,
         )
 
+
 class AlteraJTAG(Module):
     def __init__(self, primitive: str, reserved_pads: Record, chain=1):
         self.reset   = reset   = Signal() # FIXME
@@ -186,7 +187,9 @@ class AlteraJTAG(Module):
         self.tdiutap = tdiutap = Signal()
         self.tdocore = tdocore = Signal()
 
-        assert 1 <= chain <= 1
+        assert chain == 1
+
+        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap, ResetSignal("sys"))
 
         # # #
 

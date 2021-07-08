@@ -6,6 +6,7 @@
 # Copyright (c) 2019 vytautasb <v.buitvydas@limemicro.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pathlib import Path
 import os
 import subprocess
 import sys
@@ -140,6 +141,9 @@ def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, 
 
     # Set timing constraints
     qsf.append("set_global_assignment -name SDC_FILE {}.sdc".format(build_name))
+    qsf.append("set_global_assignment -name SDC_FILE jtag.sdc")
+    jtag_sdc_txt = open(Path(__file__).parent / 'jtag.sdc').read()
+    tools.write_to_file("jtag.sdc", jtag_sdc_txt)
 
     # Add additional commands
     qsf += additional_qsf_commands

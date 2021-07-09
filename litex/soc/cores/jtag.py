@@ -153,10 +153,10 @@ class AlteraJTAG(Module):
         self.drck    = drck    = Signal()
         self.sel     = sel     = Signal()
 
-        # self.tck = tck = Signal()
-        # self.tms = tms = Signal()
-        # self.tdi = tdi = Signal()
-        # self.tdo = tdo = Signal()
+        self.tck = tck = Signal()
+        self.tms = tms = Signal()
+        self.tdi = tdi = Signal()
+        self.tdo = tdo = Signal()
 
         self.altera_reserved_tck = rtck = Signal()
         self.altera_reserved_tms = rtms = Signal()
@@ -223,12 +223,12 @@ class AlteraJTAG(Module):
             reserved_pads.altera_reserved_tdo.eq(rtdo),
         ]
 
-        # self.comb += [
-            # tck.eq(tckcore),
-            # tms.eq(tmscore),
-            # tdi.eq(tdicore),
-            # tdocore.eq(tdo),
-        # ]
+        self.comb += [
+            tck.eq(tckutap),
+            tms.eq(tmsutap),
+            tdi.eq(tdiutap),
+            tdocore.eq(tdo),
+        ]
 
 
 
@@ -287,7 +287,7 @@ class XilinxJTAG(Module):
         assert 1 <= chain <= 4
 
         self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck, ResetSignal("sys"))
-        self.submodules.tap_fsm_ckinv = JTAGTAPFSM(self.tms, ~self.tck, ResetSignal("sys"))
+        # self.submodules.tap_fsm_ckinv = JTAGTAPFSM(self.tms, ~self.tck, ResetSignal("sys"))
 
         # # #
 

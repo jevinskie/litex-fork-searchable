@@ -174,9 +174,10 @@ def _build_script(build_name, create_rbf):
     script_contents += """
 set -e -u -x -o pipefail
 quartus_map --read_settings_files=on  --write_settings_files=off {build_name} -c {build_name}
+# quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist-map.vqm
 quartus_fit --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
 quartus_asm --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
-quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist.vqm
+quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist-fit.vqm
 quartus_sta {build_name} -c {build_name}
 quartus_sta -t {timing_tcl_file} -project {build_name}
 """

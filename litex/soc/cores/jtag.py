@@ -22,95 +22,85 @@ class JTAGTAPFSM(Module):
         ]
         self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
 
+
+        self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
+        self.comb += ClockSignal("jtag_inv").eq(~jtag_clk)
+        # self.comb += ResetSignal("jtag").eq(rst | ~phy.sel)
+        self.specials += AsyncResetSynchronizer(self.cd_jtag_inv, ResetSignal("sys"))
+
+
         self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)
 
         self.tck_cnt = tck_cnt = Signal(16)
         self.sync.jtag += tck_cnt.eq(tck_cnt + 1)
 
-        self.test_logic_reset = tlr = Signal()
         fsm.act('test_logic_reset',
-            tlr.eq(1),
             If(~tms, NextState('run_test_idle'))
         )
-        self.run_test_idle = rti = Signal()
         fsm.act('run_test_idle',
-            rti.eq(1),
-            If(tms, NextState('select_dr_scan'))
+            If( tms, NextState('select_dr_scan'))
         )
 
         # DR
-        self.select_dr_scan = sds = Signal()
         fsm.act('select_dr_scan',
-            sds.eq(1),
-            If(~tms, NextState('capture_dr')).Else(NextState('select_ir_scan'))
+            If(~tms, NextState('capture_dr')    ).Else(NextState('select_ir_scan'))
         )
-        self.capture_dr = cd = Signal()
         fsm.act('capture_dr',
-            cd.eq(1),
-            If(~tms, NextState('shift_dr')).Else(NextState('exit1_dr'))
+            If(~tms, NextState('shift_dr')      ).Else(NextState('exit1_dr'))
         )
-        self.shift_dr = sd = Signal()
         fsm.act('shift_dr',
-            sd.eq(1),
-            If(tms, NextState('exit1_dr'))
+            If( tms, NextState('exit1_dr'))
         )
-        self.exit1_dr = e1d = Signal()
         fsm.act('exit1_dr',
-            e1d.eq(1),
-            If(~tms, NextState('pause_dr')).Else(NextState('update_dr'))
+            If(~tms, NextState('pause_dr')      ).Else(NextState('update_dr'))
         )
-        self.pause_dr = pd = Signal()
         fsm.act('pause_dr',
-            pd.eq(1),
-            If(tms, NextState('exit2_dr'))
+            If( tms, NextState('exit2_dr'))
         )
-        self.exit2_dr = e2d = Signal()
         fsm.act('exit2_dr',
-            e2d.eq(1),
-            If(tms, NextState('update_dr')).Else(NextState('shift_dr'))
+            If( tms, NextState('update_dr')     ).Else(NextState('shift_dr'))
         )
-        self.update_dr = ud = Signal()
         fsm.act('update_dr',
-            ud.eq(1),
-            If(tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
+            If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
         # IR
-        self.select_ir_scan = sis = Signal()
         fsm.act('select_ir_scan',
-            sis.eq(1),
-            If(~tms, NextState('capture_ir')).Else(NextState('test_logic_reset'))
+            If(~tms, NextState('capture_ir')    ).Else(NextState('test_logic_reset'))
         )
-        self.capture_ir = ci = Signal()
         fsm.act('capture_ir',
-            ci.eq(1),
-            If(~tms, NextState('shift_ir')).Else(NextState('exit1_ir'))
+            If(~tms, NextState('shift_ir')      ).Else(NextState('exit1_ir'))
         )
-        self.shift_ir = si = Signal()
         fsm.act('shift_ir',
-            si.eq(1),
-            If(tms, NextState('exit1_ir'))
+            If( tms, NextState('exit1_ir'))
         )
-        self.exit1_ir = e1i = Signal()
         fsm.act('exit1_ir',
-            e1i.eq(1),
-            If(~tms, NextState('pause_ir')).Else(NextState('update_ir'))
+            If(~tms, NextState('pause_ir')      ).Else(NextState('update_ir'))
         )
-        self.pause_ir = pi = Signal()
         fsm.act('pause_ir',
-            pi.eq(1),
-            If(tms, NextState('exit2_ir'))
+            If( tms, NextState('exit2_ir'))
         )
-        self.exit2_ir = e2i = Signal()
         fsm.act('exit2_ir',
-            e2i.eq(1),
-            If(tms, NextState('update_ir')).Else(NextState('shift_ir'))
+            If( tms, NextState('update_ir')     ).Else(NextState('shift_ir'))
         )
-        self.update_ir = ui = Signal()
         fsm.act('update_ir',
-            ui.eq(1),
-            If(tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
+            If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
+
+        # state_sigs = {}
+        for state_name in fsm.actions:
+            sig = fsm.ongoing(state_name)
+            SHOUTING_NAME = state_name.upper()
+            # sig.backtrace[-1] = (SHOUTING_NAME, sig.backtrace[-1][1])
+            # setattr(self, SHOUTING_NAME, sig)
+            # state_sigs[state_name] = sig
+            # hcs_name = SHOUTING_NAME + '_hc'
+            hcs_name = SHOUTING_NAME
+            hcs = Signal(name=hcs_name)
+            setattr(self, hcs_name, hcs)
+            self.sync.jtag_inv += hcs.eq(sig)
+
+
 
 # Altera VJTAG -------------------------------------------------------------------------------------
 
@@ -297,6 +287,7 @@ class XilinxJTAG(Module):
         assert 1 <= chain <= 4
 
         self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck, ResetSignal("sys"))
+        self.submodules.tap_fsm_ckinv = JTAGTAPFSM(self.tms, ~self.tck, ResetSignal("sys"))
 
         # # #
 

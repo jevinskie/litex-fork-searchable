@@ -36,13 +36,6 @@ class SimAsyncResetSynchronizerImpl(Module):
 
 
 class SimAsyncResetSynchronizer:
-    def __init__(self):
-        print('SimAsyncResetSynchronizer __init__')
-
-    @staticmethod
-    def add_source():
-        raise NotImplementedError
-
     @staticmethod
     def lower(dr):
         return SimAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)

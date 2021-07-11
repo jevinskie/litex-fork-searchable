@@ -11,7 +11,7 @@ from migen.fhdl.module import Module
 from migen.genlib.record import Record
 
 from litex.build.generic_platform import GenericPlatform, Pins
-from litex.build.sim import common, verilator
+from litex.build.sim import common, cocotb, verilator
 from litex.soc.interconnect.csr import AutoCSR, CSR, CSRStorage
 
 from pathlib import Path
@@ -24,6 +24,8 @@ class SimPlatform(GenericPlatform):
         self.sim_requested = []
         if toolchain == "verilator":
             self.toolchain = verilator.SimVerilatorToolchain()
+        if toolchain == "cocotb":
+            self.toolchain = cocotb.SimCocotbToolchain()
         else:
             raise ValueError("Unknown toolchain")
         # we must always request the sim_trace signal
@@ -49,6 +51,8 @@ class SimPlatform(GenericPlatform):
     def get_verilog(self, *args, special_overrides=dict(), **kwargs):
         so = dict(common.sim_special_overrides)
         so.update(special_overrides)
+        gen_prim_path = Path(__file__).parent / 'data' / 'generic_primitives.v'
+        self.add_source(str(gen_prim_path), language='verilog')
         return GenericPlatform.get_verilog(self, *args, special_overrides=so, **kwargs)
 
     def build(self, *args, **kwargs):
@@ -69,11 +73,6 @@ class SimPlatform(GenericPlatform):
 class IcarusPlatform(SimPlatform):
     def _dummy_dummy(self):
         pass
-
-    def get_verilog(self, fragment, **kwargs):
-        gen_prim_path = Path(__file__).parent / 'data' / 'generic_primitives.v'
-        self.add_source(str(gen_prim_path), language='verilog')
-        return super().get_verilog(fragment, **kwargs)
 
 # Sim debug modules --------------------------------------------------------------------------------
 

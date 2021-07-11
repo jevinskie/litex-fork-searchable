@@ -62,6 +62,12 @@ class SimPlatform(GenericPlatform):
         module.add_csr("sim_finish")
         self.trace = None
 
+
+# Icarus Verilog support (for cocotb) --------------------------------------------------------------
+
+class IcarusPlatform(SimPlatform):
+    pass
+
 # Sim debug modules --------------------------------------------------------------------------------
 
 class SimTrace(Module, AutoCSR):

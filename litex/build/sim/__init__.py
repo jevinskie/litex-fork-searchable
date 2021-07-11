@@ -1,1 +1,1 @@
-from litex.build.sim.platform import SimPlatform
+from litex.build.sim.platform import SimPlatform, IcarusPlatform

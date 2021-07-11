@@ -3,6 +3,7 @@
 #
 # Copyright (c) 2015-2019 Florent Kermarrec <florent@enjoy-digital.fr>
 # Copyright (c) 2019 vytautasb <v.buitvydas@limemicro.com>
+# Copyright (c) 2021 Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
@@ -14,41 +15,28 @@ from litex.build.io import *
 
 # Common AsyncResetSynchronizer --------------------------------------------------------------------
 
-class SimAsyncResetSynchronizerImpl(Module):
+class IcarusAsyncResetSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
         rst_meta = Signal()
         self.specials += [
             Instance("GenericDFF",
                 i_d    = 0,
                 i_clk  = cd.clk,
-                i_r    = 0,
-                i_s    = async_reset,
+                i_clrn = 1,
+                i_prn  = ~async_reset,
                 o_q    = rst_meta
             ),
             Instance("GenericDFF",
                 i_d    = rst_meta,
                 i_clk  = cd.clk,
-                i_r    = 0,
-                i_s    = async_reset,
+                i_clrn = 1,
+                i_prn  = ~async_reset,
                 o_q    = cd.rst
             )
         ]
 
 
-class SimAsyncResetSynchronizer:
-    def __init__(self):
-        print('SimAsyncResetSynchronizer __init__')
-
-    @staticmethod
-    def add_source():
-        raise NotImplementedError
-
+class IcarusAsyncResetSynchronizer:
     @staticmethod
     def lower(dr):
-        return SimAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
-
-# Special Overrides --------------------------------------------------------------------------------
-
-sim_special_overrides = {
-    AsyncResetSynchronizer: SimAsyncResetSynchronizer,
-}
+        return IcarusAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)

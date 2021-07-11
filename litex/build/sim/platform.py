@@ -14,6 +14,7 @@ from litex.build.generic_platform import GenericPlatform, Pins
 from litex.build.sim import common, verilator
 from litex.soc.interconnect.csr import AutoCSR, CSR, CSRStorage
 
+from pathlib import Path
 
 class SimPlatform(GenericPlatform):
     def __init__(self, device, io, name="sim", toolchain="verilator", **kwargs):
@@ -66,7 +67,13 @@ class SimPlatform(GenericPlatform):
 # Icarus Verilog support (for cocotb) --------------------------------------------------------------
 
 class IcarusPlatform(SimPlatform):
-    pass
+    def _dummy_dummy(self):
+        pass
+
+    def get_verilog(self, fragment, **kwargs):
+        gen_prim_path = Path(__file__).parent / 'data' / 'generic_primitives.v'
+        self.add_source(str(gen_prim_path), language='verilog')
+        return super().get_verilog(fragment, **kwargs)
 
 # Sim debug modules --------------------------------------------------------------------------------
 

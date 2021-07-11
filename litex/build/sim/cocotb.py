@@ -17,6 +17,11 @@ from litex import get_data_mod
 from litex.build import tools
 from litex.build.generic_platform import *
 
+import rpyc
+from rpyc.core.service import ClassicService
+from rpyc.utils.server import ThreadedServer
+
+
 def _generate_sim_makefile(build_dir: str, build_name: str, sources: list[str], module):
     assert all([lambda src: src[1] == "verilog"])
 
@@ -44,6 +49,21 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 """
     tools.write_to_file("Makefile", makefile_contents, force_unix=True)
 
+def _run_sim(build_name: str):
+    socket_path = f'{build_name}.pipe'
+    try:
+        os.remove(socket_path)
+    except  FileNotFoundError:
+        pass
+    server = ThreadedServer(ClassicService, socket_path=socket_path, auto_register=False)
+    # self.server.logger.quiet = False
+    server._start_in_thread()
+    try:
+        r = subprocess.call(["make"])
+        if r != 0:
+            raise OSError("Subprocess failed")
+    except:
+        pass
 
 class SimCocotbToolchain:
     def build(self, platform, fragment, module,
@@ -91,7 +111,7 @@ class SimCocotbToolchain:
 
         # Run
         if run:
-            raise NotImplementedError
+            _run_sim(build_name)
 
         os.chdir(cwd)
 

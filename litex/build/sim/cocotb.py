@@ -19,8 +19,48 @@ from litex.build.generic_platform import *
 
 import rpyc
 from rpyc.core.service import ClassicService
-from rpyc.utils.server import ThreadedServer
+from rpyc.utils.server import ThreadedServer, ThreadPoolServer
 
+import cocotb
+
+class SimServer(rpyc.Service):
+    def on_connect(self, conn):
+        print(f'on_connect: {self} {conn}')
+
+    def on_disconnect(self, conn):
+        print(f'on_disconnect: {self} {conn}')
+
+    def exposed_hello(self):
+        return 'world'
+
+def start_sim_server(socket_path=None):
+    print(f'start sim server {socket_path}')
+    if cocotb.top is None and socket_path is None:
+        return
+    elif socket_path is not None:
+        try:
+            os.remove(socket_path)
+        except  FileNotFoundError:
+            pass
+        server = ThreadPoolServer(SimServer, socket_path=socket_path)
+        # self.server.logger.quiet = False
+        # server._start_in_thread()
+        rpyc.lib.spawn(lambda: server.start())
+        return server
+    elif cocotb.top is not None and socket_path is None:
+        socket_path = f'{os.environ["TOPLEVEL"]}.pipe'
+        return rpyc.utils.factory.unix_connect(socket_path)
+    else:
+        raise RuntimeError
+
+def stop_sim_server(sim_server):
+    print(f'stopping server {sim_server}')
+    # return
+    if sim_server is not None and cocotb.top is not None:
+        sim_server.close()
+        pass
+    # if sim_server is not None:
+    #     sim_server.close()
 
 def _generate_sim_makefile(build_dir: str, build_name: str, sources: list[str], module):
     assert all([lambda src: src[1] == "verilog"])
@@ -51,19 +91,15 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 def _run_sim(build_name: str):
     socket_path = f'{build_name}.pipe'
-    try:
-        os.remove(socket_path)
-    except  FileNotFoundError:
-        pass
-    server = ThreadedServer(ClassicService, socket_path=socket_path, auto_register=False)
-    # self.server.logger.quiet = False
-    server._start_in_thread()
+    local_sim_server = start_sim_server(socket_path)
     try:
         r = subprocess.call(["make"])
         if r != 0:
             raise OSError("Subprocess failed")
     except:
         pass
+    # stop_sim_server(local_sim_server)
+
 
 class SimCocotbToolchain:
     def build(self, platform, fragment, module,

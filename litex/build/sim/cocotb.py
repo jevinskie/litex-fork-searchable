@@ -23,32 +23,32 @@ from rpyc.utils.server import ThreadedServer, ThreadPoolServer
 
 import cocotb
 
-class SimServer(rpyc.Service):
-    def on_connect(self, conn):
-        # print(f'on_connect: {self} {conn}')
-        return
 
-    def on_disconnect(self, conn):
-        # print(f'on_disconnect: {self} {conn}')
-        return
-
+class SimService(rpyc.Service):
     exposed_platform = None
-
     exposed_soc = None
 
-def start_sim_server(socket_path=None):
-    # print(f'start sim server {socket_path}')
-    if cocotb.top is None and socket_path is None:
-        return
-    elif socket_path is not None:
+
+class SimServer:
+    def __init__(self, socket_path: str):
+        self.socket_path = socket_path
         try:
             os.remove(socket_path)
         except  FileNotFoundError:
             pass
-        server = ThreadPoolServer(SimServer, socket_path=socket_path, protocol_config={"allow_all_attrs": True})
-        # self.server.logger.quiet = False
-        # server._start_in_thread()
-        rpyc.lib.spawn(lambda: server.start())
+        self.srv = ThreadPoolServer(SimService, socket_path=socket_path, protocol_config={"allow_all_attrs": True})
+        rpyc.lib.spawn(lambda: self.srv.start())
+
+    def __del__(self):
+            sim_server.close()
+            os.remove(self.socket_path)
+
+
+def start_sim_server(socket_path=None):
+    if cocotb.top is None and socket_path is None:
+        return
+    elif socket_path is not None:
+        server = SimServer(socket_path)
         return server
     elif cocotb.top is not None and socket_path is None:
         socket_path = f'{os.environ["TOPLEVEL"]}.pipe'
@@ -56,14 +56,6 @@ def start_sim_server(socket_path=None):
     else:
         raise RuntimeError
 
-def stop_sim_server(sim_server):
-    # print(f'stopping server {sim_server}')
-    # return
-    if sim_server is not None and cocotb.top is not None:
-        sim_server.close()
-        pass
-    # if sim_server is not None:
-    #     sim_server.close()
 
 def _generate_sim_makefile(build_dir: str, build_name: str, sources: list[str], module):
     assert all([lambda src: src[1] == "verilog"])
@@ -92,12 +84,13 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 """
     tools.write_to_file("Makefile", makefile_contents, force_unix=True)
 
+
 def _run_sim(build_name: str, platform, soc):
     global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
-    local_sim_server.service.exposed_platform = platform
-    local_sim_server.service.exposed_soc = soc
+    local_sim_server.srv.service.exposed_platform = platform
+    local_sim_server.srv.service.exposed_soc = soc
     try:
         r = subprocess.call(["make"])
         if r != 0:

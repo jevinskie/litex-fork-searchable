@@ -40,6 +40,25 @@ class SimAsyncResetSynchronizer:
     def lower(dr):
         return SimAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
+class CocotbVCDDumperSpecial(Special):
+    @staticmethod
+    def emit_verilog(instance, ns, add_data_file):
+        r = """
+// the "macro" to dump signals
+`ifdef COCOTB_SIM_DUMP_VCD_VERILOG
+initial begin
+  $dumpfile (`COCOTB_SIM_DUMP_VCD_VERILOG);
+  $dumpvars (0, `COCOTB_SIM_DUMP_VCD_VERILOG_TOPLEVEL);
+  #1;
+end
+"""
+        return r
+
+    @staticmethod
+    def lower(dr):
+        pass
+
+
 # Special Overrides --------------------------------------------------------------------------------
 
 sim_special_overrides = {

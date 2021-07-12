@@ -68,12 +68,6 @@ class SimPlatform(GenericPlatform):
         self.trace = None
 
 
-# Icarus Verilog support (for cocotb) --------------------------------------------------------------
-
-class IcarusPlatform(SimPlatform):
-    def _dummy_dummy(self):
-        pass
-
 # Sim debug modules --------------------------------------------------------------------------------
 
 class SimTrace(Module, AutoCSR):

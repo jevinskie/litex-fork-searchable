@@ -25,16 +25,20 @@ import cocotb
 
 class SimServer(rpyc.Service):
     def on_connect(self, conn):
-        print(f'on_connect: {self} {conn}')
+        # print(f'on_connect: {self} {conn}')
+        return
 
     def on_disconnect(self, conn):
-        print(f'on_disconnect: {self} {conn}')
+        # print(f'on_disconnect: {self} {conn}')
+        return
 
     def exposed_hello(self):
         return 'world'
 
+    exposed_platform = None
+
 def start_sim_server(socket_path=None):
-    print(f'start sim server {socket_path}')
+    # print(f'start sim server {socket_path}')
     if cocotb.top is None and socket_path is None:
         return
     elif socket_path is not None:
@@ -54,7 +58,7 @@ def start_sim_server(socket_path=None):
         raise RuntimeError
 
 def stop_sim_server(sim_server):
-    print(f'stopping server {sim_server}')
+    # print(f'stopping server {sim_server}')
     # return
     if sim_server is not None and cocotb.top is not None:
         sim_server.close()
@@ -89,9 +93,11 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 """
     tools.write_to_file("Makefile", makefile_contents, force_unix=True)
 
-def _run_sim(build_name: str):
+def _run_sim(build_name: str, platform):
+    global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
+    local_sim_server.service.exposed_platform = platform
     try:
         r = subprocess.call(["make"])
         if r != 0:
@@ -147,7 +153,7 @@ class SimCocotbToolchain:
 
         # Run
         if run:
-            _run_sim(build_name)
+            _run_sim(build_name, platform)
 
         os.chdir(cwd)
 

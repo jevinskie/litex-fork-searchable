@@ -32,10 +32,9 @@ class SimServer(rpyc.Service):
         # print(f'on_disconnect: {self} {conn}')
         return
 
-    def exposed_hello(self):
-        return 'world'
-
     exposed_platform = None
+
+    exposed_soc = None
 
 def start_sim_server(socket_path=None):
     # print(f'start sim server {socket_path}')
@@ -93,11 +92,12 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 """
     tools.write_to_file("Makefile", makefile_contents, force_unix=True)
 
-def _run_sim(build_name: str, platform):
+def _run_sim(build_name: str, platform, soc):
     global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
     local_sim_server.service.exposed_platform = platform
+    local_sim_server.service.exposed_soc = soc
     try:
         r = subprocess.call(["make"])
         if r != 0:
@@ -108,7 +108,7 @@ def _run_sim(build_name: str, platform):
 
 
 class SimCocotbToolchain:
-    def build(self, platform, fragment, module,
+    def build(self, platform, fragment, module, soc,
             build_dir    = "build",
             build_name   = "cocotb",
             build        = True,
@@ -153,7 +153,7 @@ class SimCocotbToolchain:
 
         # Run
         if run:
-            _run_sim(build_name, platform)
+            _run_sim(build_name, platform, soc)
 
         os.chdir(cwd)
 

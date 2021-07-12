@@ -54,18 +54,6 @@ class CocotbVCDDumperSpecial(Special):
 initial begin
   $dumpfile (`COCOTB_SIM_DUMP_VCD_VERILOG);
   $dumpvars (0, `COCOTB_SIM_DUMP_VCD_VERILOG_TOPLEVEL);
-"""
-        instance_names = []
-        for sig, i in ns.sigs.items():
-            if isinstance(sig, Instance) and not isinstance(sig, CocotbVCDDumperSpecial):
-                print(f'sig: {sig} i: {i}')
-                if i == 0:
-                    instance_name = sig.name_override
-                else:
-                    instance_name = f'{sig.name_override}_{i}'
-                # r += f"  $dumpvars (0, {instance_name});\n"
-
-        r += """
   #1;
 end
 `endif

@@ -46,7 +46,7 @@ def start_sim_server(socket_path=None):
             os.remove(socket_path)
         except  FileNotFoundError:
             pass
-        server = ThreadPoolServer(SimServer, socket_path=socket_path)
+        server = ThreadPoolServer(SimServer, socket_path=socket_path, protocol_config={"allow_all_attrs": True})
         # self.server.logger.quiet = False
         # server._start_in_thread()
         rpyc.lib.spawn(lambda: server.start())

@@ -357,7 +357,10 @@ def _printsync(f, ns):
 
 def _printspecials(overrides, specials, ns, add_data_file, attr_translate):
     r = ""
-    for special in sorted(specials, key=lambda x: x.duid):
+    def sorting_key(s):
+        prio = getattr(s, 'priority', 0)
+        return (prio, s.duid)
+    for special in sorted(specials, key=sorting_key):
         if hasattr(special, "attr"):
             attr = _printattr(special.attr, attr_translate)
             if attr:

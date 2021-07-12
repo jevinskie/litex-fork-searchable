@@ -41,16 +41,35 @@ class SimAsyncResetSynchronizer:
         return SimAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
 class CocotbVCDDumperSpecial(Special):
+    def __init__(self):
+        super().__init__()
+        self.priority = 100
+
     @staticmethod
     def emit_verilog(instance, ns, add_data_file):
         r = """
+
 // the "macro" to dump signals
 `ifdef COCOTB_SIM_DUMP_VCD_VERILOG
 initial begin
   $dumpfile (`COCOTB_SIM_DUMP_VCD_VERILOG);
   $dumpvars (0, `COCOTB_SIM_DUMP_VCD_VERILOG_TOPLEVEL);
+"""
+        instance_names = []
+        for sig, i in ns.sigs.items():
+            if isinstance(sig, Instance) and not isinstance(sig, CocotbVCDDumperSpecial):
+                print(f'sig: {sig} i: {i}')
+                if i == 0:
+                    instance_name = sig.name_override
+                else:
+                    instance_name = f'{sig.name_override}_{i}'
+                # r += f"  $dumpvars (0, {instance_name});\n"
+
+        r += """
   #1;
 end
+`endif
+
 """
         return r
 

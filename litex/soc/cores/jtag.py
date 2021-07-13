@@ -14,20 +14,9 @@ from litex.soc.interconnect import stream
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
-    def __init__(self, tms: Signal, jtag_clk: Signal, sys_rst: Signal):
+    def __init__(self, tms: Signal, tck: Signal):
         self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
-        self.comb += [
-            ClockSignal('jtag').eq(jtag_clk),
-            # ResetSignal('jtag').eq(jtag_rst),
-        ]
-        # self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
-
-
-        self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
-        self.comb += ClockSignal("jtag_inv").eq(~jtag_clk)
-        # self.comb += ResetSignal("jtag").eq(rst | ~phy.sel)
-        # self.specials += AsyncResetSynchronizer(self.cd_jtag_inv, ResetSignal("sys"))
-
+        self.comb += ClockSignal('jtag').eq(tck)
 
         self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
@@ -87,18 +76,12 @@ class JTAGTAPFSM(Module):
             If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
-        # state_sigs = {}
         for state_name in fsm.actions:
             sig = fsm.ongoing(state_name)
             SHOUTING_NAME = state_name.upper()
-            # sig.backtrace[-1] = (SHOUTING_NAME, sig.backtrace[-1][1])
-            # setattr(self, SHOUTING_NAME, sig)
-            # state_sigs[state_name] = sig
-            # hcs_name = SHOUTING_NAME + '_hc'
             hcs_name = SHOUTING_NAME
             hcs = Signal(name=hcs_name)
             setattr(self, hcs_name, hcs)
-            # self.sync.jtag_inv += hcs.eq(sig)
             self.comb += hcs.eq(sig)
 
 
@@ -180,7 +163,7 @@ class AlteraJTAG(Module):
 
         assert chain == 1
 
-        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap, ResetSignal("sys"))
+        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap)
 
         # # #
 
@@ -286,7 +269,7 @@ class XilinxJTAG(Module):
 
         assert 1 <= chain <= 4
 
-        self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck, ResetSignal("sys"))
+        self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck)
         # self.submodules.tap_fsm_ckinv = JTAGTAPFSM(self.tms, ~self.tck, ResetSignal("sys"))
 
         # # #

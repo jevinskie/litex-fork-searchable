@@ -14,19 +14,19 @@ from litex.soc.interconnect import stream
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
-    def __init__(self, tms: Signal, jtag_clk: Signal, jtag_rst: Signal):
+    def __init__(self, tms: Signal, jtag_clk: Signal, sys_rst: Signal):
         self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
         self.comb += [
             ClockSignal('jtag').eq(jtag_clk),
             # ResetSignal('jtag').eq(jtag_rst),
         ]
-        self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
+        # self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
 
 
         self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
         self.comb += ClockSignal("jtag_inv").eq(~jtag_clk)
         # self.comb += ResetSignal("jtag").eq(rst | ~phy.sel)
-        self.specials += AsyncResetSynchronizer(self.cd_jtag_inv, ResetSignal("sys"))
+        # self.specials += AsyncResetSynchronizer(self.cd_jtag_inv, ResetSignal("sys"))
 
 
         self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)

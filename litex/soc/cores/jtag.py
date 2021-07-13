@@ -29,7 +29,7 @@ class JTAGTAPFSM(Module):
         # self.specials += AsyncResetSynchronizer(self.cd_jtag_inv, ResetSignal("sys"))
 
 
-        self.submodules.fsm = fsm = FSM(clock_domain=cd_jtag.name)
+        self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
         self.tck_cnt = tck_cnt = Signal(16)
         self.sync.jtag += tck_cnt.eq(tck_cnt + 1)
@@ -99,7 +99,7 @@ class JTAGTAPFSM(Module):
             hcs = Signal(name=hcs_name)
             setattr(self, hcs_name, hcs)
             # self.sync.jtag_inv += hcs.eq(sig)
-            self.sync += hcs.eq(sig)
+            self.sync.jtag += hcs.eq(sig)
 
 
 # Altera VJTAG -------------------------------------------------------------------------------------

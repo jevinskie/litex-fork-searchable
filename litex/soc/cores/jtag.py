@@ -98,8 +98,8 @@ class JTAGTAPFSM(Module):
             hcs_name = SHOUTING_NAME
             hcs = Signal(name=hcs_name)
             setattr(self, hcs_name, hcs)
-            self.sync.jtag_inv += hcs.eq(sig)
-
+            # self.sync.jtag_inv += hcs.eq(sig)
+            self.sync += hcs.eq(sig)
 
 
 # Altera VJTAG -------------------------------------------------------------------------------------

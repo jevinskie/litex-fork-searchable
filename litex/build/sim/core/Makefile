@@ -37,7 +37,7 @@ $(OBJS_SIM): %.o: $(SRC_DIR)/%.c | mkdir
 
 .PHONY: sim
 sim: $(OBJS_SIM) | mkdir
-	verilator -Wno-fatal -O3 $(CC_SRCS) --top-module sim --exe \
+	verilator -Wno-fatal -Wall -O3 $(CC_SRCS) --top-module sim --exe \
 		-DPRINTF_COND=0 \
 		$(SRCS_SIM_CPP) $(OBJS_SIM) \
 		--top-module sim \

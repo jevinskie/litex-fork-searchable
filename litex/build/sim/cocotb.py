@@ -101,7 +101,7 @@ def _run_sim(build_name: str, platform, soc):
 
 
 class SimCocotbToolchain:
-    def build(self, platform, fragment, module, soc,
+    def build(self, platform, fragment,
             build_dir    = "build",
             build_name   = "cocotb",
             build        = True,
@@ -117,7 +117,9 @@ class SimCocotbToolchain:
             trace_end    = -1,
             trace_exit   = False,
             sim_end      = -1,
-            regular_comb = False):
+            regular_comb = False,
+            module       = None,
+            soc          = None):
 
         # Create build directory
         os.makedirs(build_dir, exist_ok=True)

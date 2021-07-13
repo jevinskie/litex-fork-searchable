@@ -200,7 +200,9 @@ class SimVerilatorToolchain:
             trace_end    = -1,
             trace_exit   = False,
             sim_end      = -1,
-            regular_comb = False):
+            regular_comb = False,
+            module       = None,
+            soc          = None):
 
         # Create build directory
         os.makedirs(build_dir, exist_ok=True)

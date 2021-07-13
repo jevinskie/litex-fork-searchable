@@ -76,8 +76,10 @@ class JTAGTAPFSM(Module):
             If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
+        self.fsm.do_finalize()
+
         for state_name in fsm.actions:
-            sig = fsm.ongoing(state_name)
+            sig = fsm.ongoing_comb(state_name)
             SHOUTING_NAME = state_name.upper()
             hcs_name = SHOUTING_NAME
             hcs = Signal(name=hcs_name)

@@ -79,13 +79,20 @@ class JTAGTAPFSM(Module):
         self.fsm.do_finalize()
 
         for state_name in fsm.actions:
-            sig = fsm.ongoing_comb(state_name)
+            sig = fsm.ongoing(state_name)
             SHOUTING_NAME = state_name.upper()
             hcs_name = SHOUTING_NAME
             hcs = Signal(name=hcs_name)
             setattr(self, hcs_name, hcs)
             self.comb += hcs.eq(sig)
 
+        for state_name in fsm.actions:
+            sig = fsm.ongoing_ns(state_name)
+            SHOUTING_NAME = state_name.upper() + '_ns'
+            hcs_name = SHOUTING_NAME
+            hcs = Signal(name=hcs_name)
+            setattr(self, hcs_name, hcs)
+            self.comb += hcs.eq(sig)
 
 # Altera VJTAG -------------------------------------------------------------------------------------
 

@@ -105,8 +105,6 @@ class JTAGTAPFSM(Module):
             setattr(self, hcs_name, hcs)
             self.comb += hcs.eq(sig)
 
-        # self.fsm.do_finalize()
-        print('fsm done')
 
 # Altera VJTAG -------------------------------------------------------------------------------------
 

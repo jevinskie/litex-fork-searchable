@@ -27,6 +27,7 @@ import cocotb
 class SimService(rpyc.Service):
     exposed_platform = None
     exposed_soc = None
+    exposed_ns = None
 
 
 class SimServer:
@@ -85,12 +86,13 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
     tools.write_to_file("Makefile", makefile_contents, force_unix=True)
 
 
-def _run_sim(build_name: str, platform, soc):
+def _run_sim(build_name: str, platform, soc, namespace):
     global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
     local_sim_server.srv.service.exposed_platform = platform
     local_sim_server.srv.service.exposed_soc = soc
+    local_sim_server.srv.service.exposed_ns = namespace
     try:
         r = subprocess.call(["make"])
         if r != 0:
@@ -148,7 +150,7 @@ class SimCocotbToolchain:
 
         # Run
         if run:
-            _run_sim(build_name, platform, soc)
+            _run_sim(build_name, platform, soc, v_output.ns)
 
         os.chdir(cwd)
 

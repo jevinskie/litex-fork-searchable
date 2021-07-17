@@ -15,9 +15,6 @@ from litex.soc.interconnect import stream
 
 class JTAGTAPFSM(Module):
     def __init__(self, tms: Signal, tck: Signal):
-        self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
-        self.comb += ClockSignal('jtag').eq(tck)
-
         self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
         self.tck_cnt = tck_cnt = Signal(16)
@@ -76,23 +73,40 @@ class JTAGTAPFSM(Module):
             If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
-        self.fsm.do_finalize()
+        # 11491.1-2013 Table 6-3 "State assignments for example TAP controller"  page 36 pdf page 58
+        self.fsm.encoding = {
+            'exit2_dr': 0,
+            'exit1_dr': 1,
+            'shift_dr': 2,
+            'pause_dr': 3,
+            'select_ir_scan': 4,
+            'update_dr': 5,
+            'capture_dr': 6,
+            'select_dr_scan': 7,
+            'exit2_ir': 8,
+            'exit1_ir': 9,
+            'shift_ir': 0xA,
+            'pause_ir': 0xB,
+            'run_test_idle': 0xC,
+            'update_ir': 0xD,
+            'capture_ir': 0xE,
+            'test_logic_reset': 0xF,
+        }
+
 
         for state_name in fsm.actions:
-            sig = fsm.ongoing(state_name)
+            reset_val = 0
+            if state_name == 'test_logic_reset':
+                reset_val = 1
+            sig = fsm.ongoing(state_name, reset=reset_val)
             SHOUTING_NAME = state_name.upper()
             hcs_name = SHOUTING_NAME
             hcs = Signal(name=hcs_name)
             setattr(self, hcs_name, hcs)
             self.comb += hcs.eq(sig)
 
-        for state_name in fsm.actions:
-            sig = fsm.ongoing_ns(state_name)
-            SHOUTING_NAME = state_name.upper() + '_ns'
-            hcs_name = SHOUTING_NAME
-            hcs = Signal(name=hcs_name)
-            setattr(self, hcs_name, hcs)
-            self.comb += hcs.eq(sig)
+        # self.fsm.do_finalize()
+        print('fsm done')
 
 # Altera VJTAG -------------------------------------------------------------------------------------
 

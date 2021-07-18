@@ -14,7 +14,7 @@ from litex.soc.interconnect import stream
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
-    def __init__(self, tms: Signal, tck: Signal):
+    def __init__(self, tms: Signal, tck: Signal, use_ieee_encoding=True, expose_signals=True):
         self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
         self.tck_cnt = tck_cnt = Signal(16)
@@ -73,37 +73,39 @@ class JTAGTAPFSM(Module):
             If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
         )
 
-        # 11491.1-2013 Table 6-3 "State assignments for example TAP controller"  page 36 pdf page 58
-        self.fsm.encoding = {
-            'exit2_dr': 0,
-            'exit1_dr': 1,
-            'shift_dr': 2,
-            'pause_dr': 3,
-            'select_ir_scan': 4,
-            'update_dr': 5,
-            'capture_dr': 6,
-            'select_dr_scan': 7,
-            'exit2_ir': 8,
-            'exit1_ir': 9,
-            'shift_ir': 0xA,
-            'pause_ir': 0xB,
-            'run_test_idle': 0xC,
-            'update_ir': 0xD,
-            'capture_ir': 0xE,
-            'test_logic_reset': 0xF,
-        }
+        if use_ieee_encoding:
+            # 11491.1-2013 Table 6-3 "State assignments for example TAP controller"  page 36 pdf page 58
+            self.fsm.encoding = {
+                'exit2_dr': 0,
+                'exit1_dr': 1,
+                'shift_dr': 2,
+                'pause_dr': 3,
+                'select_ir_scan': 4,
+                'update_dr': 5,
+                'capture_dr': 6,
+                'select_dr_scan': 7,
+                'exit2_ir': 8,
+                'exit1_ir': 9,
+                'shift_ir': 0xA,
+                'pause_ir': 0xB,
+                'run_test_idle': 0xC,
+                'update_ir': 0xD,
+                'capture_ir': 0xE,
+                'test_logic_reset': 0xF,
+            }
 
 
-        for state_name in fsm.actions:
-            reset_val = 0
-            if state_name == 'test_logic_reset':
-                reset_val = 1
-            sig = fsm.ongoing(state_name, reset=reset_val)
-            SHOUTING_NAME = state_name.upper()
-            hcs_name = SHOUTING_NAME
-            hcs = Signal(name=hcs_name)
-            setattr(self, hcs_name, hcs)
-            self.comb += hcs.eq(sig)
+        if expose_signals:
+            for state_name in fsm.actions:
+                reset_val = 0
+                if state_name == 'test_logic_reset':
+                    reset_val = 1
+                sig = fsm.ongoing(state_name, reset=reset_val)
+                SHOUTING_NAME = state_name.upper()
+                hcs_name = SHOUTING_NAME
+                hcs = Signal(name=hcs_name)
+                setattr(self, hcs_name, hcs)
+                self.comb += hcs.eq(sig)
 
 
 # Altera VJTAG -------------------------------------------------------------------------------------
@@ -148,8 +150,8 @@ class AlteraVJTAG(Module):
 
 class AlteraJTAG(Module):
     def __init__(self, primitive: str, reserved_pads: Record, chain=1):
-        self.reset   = reset   = Signal() # FIXME
-        self.capture = capture = Signal() # FIXME
+        self.reset   = reset   = Signal()
+        self.capture = capture = Signal()
         self.shift   = shift   = Signal()
         self.update  = update  = Signal()
         #
@@ -184,9 +186,22 @@ class AlteraJTAG(Module):
 
         assert chain == 1
 
-        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap)
+
 
         # # #
+
+        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap)
+        reset.eq(self.tap_fsm.TEST_LOGIC_RESET)
+        capture.eq(self.tap_fsm.CAPTURE_DR)
+
+        self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
+        self.comb += ClockSignal('jtag').eq(tck)
+        self.comb += ResetSignal('jtag').eq(ResetSignal("sys"))
+        # self.specials += AsyncResetSynchronizer(self.cd_jtag, ResetSignal("sys"))
+
+        self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
+        self.comb += ClockSignal("jtag_inv").eq(~tck)
+        self.comb += ResetSignal('jtag_inv').eq(ResetSignal("sys"))
 
         self.specials += Instance(primitive,
             # o_???          = reset,

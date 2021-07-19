@@ -190,7 +190,7 @@ class AlteraJTAG(Module):
 
         # # #
 
-        self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap)
+        self.submodules.tap_fsm = JTAGTAPFSM(tms, tck)
         self.sync.jtag_inv += reset.eq(self.tap_fsm.TEST_LOGIC_RESET)
         self.sync.jtag_inv += capture.eq(self.tap_fsm.CAPTURE_DR)
 

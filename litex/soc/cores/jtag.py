@@ -191,8 +191,8 @@ class AlteraJTAG(Module):
         # # #
 
         self.submodules.tap_fsm = JTAGTAPFSM(tmsutap, tckutap)
-        reset.eq(self.tap_fsm.TEST_LOGIC_RESET)
-        capture.eq(self.tap_fsm.CAPTURE_DR)
+        self.sync.jtag_inv += reset.eq(self.tap_fsm.TEST_LOGIC_RESET)
+        self.sync.jtag_inv += capture.eq(self.tap_fsm.CAPTURE_DR)
 
         self.clock_domains.cd_jtag = cd_jtag = ClockDomain("jtag")
         self.comb += ClockSignal('jtag').eq(tck)

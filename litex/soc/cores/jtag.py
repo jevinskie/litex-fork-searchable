@@ -235,12 +235,12 @@ class AlteraJTAG(Module):
             o_tdo = rtdo,
         )
 
-        self.comb += [
-            rtms.eq(reserved_pads.altera_reserved_tms),
-            rtck.eq(reserved_pads.altera_reserved_tck),
-            rtdi.eq(reserved_pads.altera_reserved_tdi),
-            reserved_pads.altera_reserved_tdo.eq(rtdo),
-        ]
+        # self.comb += [
+        #     rtms.eq(reserved_pads.altera_reserved_tms),
+        #     rtck.eq(reserved_pads.altera_reserved_tck),
+        #     rtdi.eq(reserved_pads.altera_reserved_tdi),
+        #     reserved_pads.altera_reserved_tdo.eq(rtdo),
+        # ]
 
         self.comb += [
             tck.eq(tckutap),
@@ -381,7 +381,7 @@ class JTAGPHY(Module):
             elif device[:4] in ["xcku", "xcvu"]:
                 jtag = USJTAG(chain=chain)
             elif device[:3].lower() in ["10m"]:
-                jtag = AlteraJTAG(chain=chain)
+                jtag = MAX10JTAG(chain=chain, reserved_pads=None)
             else:
                 raise NotImplementedError
             self.submodules.jtag = jtag

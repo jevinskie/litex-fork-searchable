@@ -3,6 +3,7 @@
 #
 # Copyright (c) 2015-2019 Florent Kermarrec <florent@enjoy-digital.fr>
 # Copyright (c) 2019 vytautasb <v.buitvydas@limemicro.com>
+# Copyright (c) 2021 Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
@@ -12,7 +13,7 @@ from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.build.io import *
 
-# Common AsyncResetSynchronizer --------------------------------------------------------------------
+# Common AsyncResetSynchronizer ------------------------------------------------------------------
 
 class AlteraAsyncResetSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
@@ -40,7 +41,7 @@ class AlteraAsyncResetSynchronizer:
     def lower(dr):
         return AlteraAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
-# Common DifferentialInput -------------------------------------------------------------------------
+# Common DifferentialInput -----------------------------------------------------------------------
 
 class AlteraDifferentialInputImpl(Module):
     def __init__(self, i_p, i_n, o):
@@ -59,7 +60,7 @@ class AlteraDifferentialInput:
     def lower(dr):
         return AlteraDifferentialInputImpl(dr.i_p, dr.i_n, dr.o)
 
-# Common DifferentialOutput ------------------------------------------------------------------------
+# Common DifferentialOutput ----------------------------------------------------------------------
 
 class AlteraDifferentialOutputImpl(Module):
     def __init__(self, i, o_p, o_n):
@@ -78,7 +79,7 @@ class AlteraDifferentialOutput:
     def lower(dr):
         return AlteraDifferentialOutputImpl(dr.i, dr.o_p, dr.o_n)
 
-# Common DDROutput ---------------------------------------------------------------------------------
+# Common DDROutput -------------------------------------------------------------------------------
 
 class AlteraDDROutputImpl(Module):
     def __init__(self, i1, i2, o, clk):
@@ -96,7 +97,7 @@ class AlteraDDROutput:
     def lower(dr):
         return AlteraDDROutputImpl(dr.i1, dr.i2, dr.o, dr.clk)
 
-# Common DDRInput ----------------------------------------------------------------------------------
+# Common DDRInput --------------------------------------------------------------------------------
 
 class AlteraDDRInputImpl(Module):
     def __init__(self, i, o1, o2, clk):
@@ -127,7 +128,13 @@ class AlteraSDRInput:
     def lower(dr):
         return AlteraDDRInputImpl(dr.i, dr.o, Signal(), dr.clk)
 
-# Special Overrides --------------------------------------------------------------------------------
+# JTAG Pin routing to top level ------------------------------------------------------------------
+
+class AlteraJTAGPrimitiveInstance(Instance):
+    def __init__(self, of, *items, **kwargs):
+        super().__init__(of, *items, **kwargs)
+
+# Special Overrides ------------------------------------------------------------------------------
 
 altera_special_overrides = {
     AsyncResetSynchronizer: AlteraAsyncResetSynchronizer,

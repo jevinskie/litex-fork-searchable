@@ -11,6 +11,8 @@ from migen.genlib.cdc import AsyncResetSynchronizer
 
 from litex.soc.interconnect import stream
 
+from litex.build.altera.common import AlteraJTAGPrimitiveInstance
+
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):

@@ -24,9 +24,10 @@ from litex.soc.integration.soc import *
 from litex.soc.cores.bitbang import *
 from litex.soc.cores.cpu import CPUS
 
+
 from litedram import modules as litedram_modules
 from litedram.modules import parse_spd_hexdump
-from litedram.common import *
+from litedram.phy.model import sdram_module_nphases, get_sdram_phy_settings
 from litedram.phy.model import SDRAMPHYModel
 
 from liteeth.phy.model import LiteEthPHYModel
@@ -81,75 +82,6 @@ class Platform(SimPlatform):
     def __init__(self):
         SimPlatform.__init__(self, "SIM", _io)
 
-# DFI PHY model settings ---------------------------------------------------------------------------
-
-sdram_module_nphases = {
-    "SDR":   1,
-    "DDR":   2,
-    "LPDDR": 2,
-    "DDR2":  2,
-    "DDR3":  4,
-    "DDR4":  4,
-}
-
-def get_sdram_phy_settings(memtype, data_width, clk_freq):
-    nphases = sdram_module_nphases[memtype]
-
-    if memtype == "SDR":
-        # Settings from gensdrphy
-        rdphase       = 0
-        wrphase       = 0
-        cl            = 2
-        cwl           = None
-        read_latency  = 4
-        write_latency = 0
-    elif memtype in ["DDR", "LPDDR"]:
-        # Settings from s6ddrphy
-        rdphase       = 0
-        wrphase       = 1
-        cl            = 3
-        cwl           = None
-        read_latency  = 5
-        write_latency = 0
-    elif memtype in ["DDR2", "DDR3"]:
-        # Settings from s7ddrphy
-        tck             = 2/(2*nphases*clk_freq)
-        cl, cwl         = get_default_cl_cwl(memtype, tck)
-        cl_sys_latency  = get_sys_latency(nphases, cl)
-        cwl_sys_latency = get_sys_latency(nphases, cwl)
-        rdphase         = get_sys_phase(nphases, cl_sys_latency, cl)
-        wrphase         = get_sys_phase(nphases, cwl_sys_latency, cwl)
-        read_latency    = cl_sys_latency + 6
-        write_latency   = cwl_sys_latency - 1
-    elif memtype == "DDR4":
-        # Settings from usddrphy
-        tck             = 2/(2*nphases*clk_freq)
-        cl, cwl         = get_default_cl_cwl(memtype, tck)
-        cl_sys_latency  = get_sys_latency(nphases, cl)
-        cwl_sys_latency = get_sys_latency(nphases, cwl)
-        rdphase         = get_sys_phase(nphases, cl_sys_latency, cl)
-        wrphase         = get_sys_phase(nphases, cwl_sys_latency, cwl)
-        read_latency    = cl_sys_latency + 5
-        write_latency   = cwl_sys_latency - 1
-
-    sdram_phy_settings = {
-        "nphases":       nphases,
-        "rdphase":       rdphase,
-        "wrphase":       wrphase,
-        "cl":            cl,
-        "cwl":           cwl,
-        "read_latency":  read_latency,
-        "write_latency": write_latency,
-    }
-
-    return PhySettings(
-        phytype      = "SDRAMPHYModel",
-        memtype      = memtype,
-        databits     = data_width,
-        dfi_databits = data_width if memtype == "SDR" else 2*data_width,
-        **sdram_phy_settings,
-    )
-
 # Simulation SoC -----------------------------------------------------------------------------------
 
 class SimSoC(SoCCore):
@@ -191,16 +123,12 @@ class SimSoC(SoCCore):
                 sdram_module     = sdram_module_cls(sdram_clk_freq, sdram_rate)
             else:
                 sdram_module = litedram_modules.SDRAMModule.from_spd_data(sdram_spd_data, sdram_clk_freq)
-            phy_settings     = get_sdram_phy_settings(
-                memtype    = sdram_module.memtype,
-                data_width = sdram_data_width,
-                clk_freq   = sdram_clk_freq)
             self.submodules.sdrphy = SDRAMPHYModel(
-                module    = sdram_module,
-                settings  = phy_settings,
-                clk_freq  = sdram_clk_freq,
-                verbosity = sdram_verbosity,
-                init      = sdram_init)
+                module     = sdram_module,
+                data_width = sdram_data_width,
+                clk_freq   = sdram_clk_freq,
+                verbosity  = sdram_verbosity,
+                init       = sdram_init)
             self.add_sdram("sdram",
                 phy                     = self.sdrphy,
                 module                  = sdram_module,
@@ -375,6 +303,7 @@ def sim_args(parser):
     parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
     parser.add_argument("--sim-debug",            action="store_true",     help="Add simulation debugging modules")
     parser.add_argument("--gtkwave-savefile",     action="store_true",     help="Generate GTKWave savefile")
+    parser.add_argument("--non-interactive",      action="store_true",     help="Run simulation without user input")
 
 def main():
     parser = argparse.ArgumentParser(description="Generic LiteX SoC Simulation")
@@ -453,7 +382,8 @@ def main():
             trace       = args.trace,
             trace_fst   = args.trace_fst,
             trace_start = trace_start,
-            trace_end   = trace_end
+            trace_end   = trace_end,
+            interactive = not args.non_interactive
         )
         if args.with_analyzer:
             soc.analyzer.export_csv(vns, "analyzer.csv")

@@ -205,7 +205,7 @@ def _printattr(attr, attr_translate):
             attr_name, attr_value = attr
         else:
             # translated attribute
-            at = attr_translate[attr]
+            at = attr_translate.get(attr, None)
             if at is None:
                 continue
             attr_name, attr_value = at
@@ -372,7 +372,7 @@ def _printspecials(overrides, specials, ns, add_data_file, attr_translate):
     return r
 
 
-class DummyAttrTranslate:
+class DummyAttrTranslate(dict):
     def __getitem__(self, k):
         return (k, "true")
 

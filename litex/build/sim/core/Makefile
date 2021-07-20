@@ -9,10 +9,11 @@ ifeq ($(UNAME_S),Darwin)
 	LDFLAGS += -ggdb
 else
 	CC ?= gcc
-	CFLAGS += -Wall -$(OPT_LEVEL) -ggdb $(if $(COVERAGE), -DVM_COVERAGE) $(if $(TRACE_FST), -DTRACE_FST)
+	CFLAGS += -ggdb
 	LDFLAGS += -lpthread -Wl,--no-as-needed -ljson-c -lm -lstdc++ -Wl,--no-as-needed -ldl -levent
 endif
 
+CFLAGS += -Wall -$(OPT_LEVEL) $(if $(COVERAGE), -DVM_COVERAGE) $(if $(TRACE_FST), -DTRACE_FST)
 
 CC_SRCS ?= "--cc sim.v"
 

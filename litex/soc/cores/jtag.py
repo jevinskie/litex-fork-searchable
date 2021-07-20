@@ -246,7 +246,7 @@ class AlteraJTAG(Module):
             tck.eq(tckutap),
             tms.eq(tmsutap),
             tdi.eq(tdiutap),
-            tdocore.eq(tdo),
+            tdouser.eq(tdo),
         ]
 
 
@@ -368,9 +368,9 @@ class JTAGPHY(Module):
 
         # # #
 
-        valid = Signal()
-        data  = Signal(data_width)
-        count = Signal(max=data_width)
+        self.valid = valid = Signal()
+        self.data  = data  = Signal(data_width, reset=0xAA)
+        self.count = count = Signal(max=data_width)
 
         # JTAG TAP ---------------------------------------------------------------------------------
         if jtag is None:
@@ -406,7 +406,7 @@ class JTAGPHY(Module):
             sink, source = tx_cdc.source, rx_cdc.sink
 
         # JTAG Xfer FSM ----------------------------------------------------------------------------
-        fsm = FSM(reset_state="XFER-READY")
+        self.submodules.fsm = fsm = FSM(reset_state="XFER-READY")
         fsm = ClockDomainsRenamer("jtag")(fsm)
         fsm = ResetInserter()(fsm)
         self.submodules += fsm
@@ -422,7 +422,7 @@ class JTAGPHY(Module):
             )
         )
         fsm.act("XFER-DATA",
-            jtag.tdo.eq(data),
+            jtag.tdo.eq(data[0]),
             If(jtag.shift,
                 NextValue(count, count + 1),
                 NextValue(data, Cat(data[1:], jtag.tdi)),

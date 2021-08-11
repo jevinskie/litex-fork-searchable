@@ -347,7 +347,7 @@ class USJTAG(XilinxJTAG):
 # JTAG PHY -----------------------------------------------------------------------------------------
 
 class JTAGPHY(Module):
-    def __init__(self, jtag=None, device=None, data_width=8, clock_domain="sys", chain=1):
+    def __init__(self, jtag=None, device=None, platform=None, data_width=8, clock_domain="sys", chain=1):
         """JTAG PHY
 
         Provides a simple JTAG to LiteX stream module to easily stream data to/from the FPGA
@@ -383,7 +383,7 @@ class JTAGPHY(Module):
             elif device[:4] in ["xcku", "xcvu"]:
                 jtag = USJTAG(chain=chain)
             elif device[:3].lower() in ["10m"]:
-                jtag = MAX10JTAG(chain=chain, reserved_pads=None)
+                jtag = MAX10JTAG(chain=chain, platform=platform, reserved_pads=None)
             else:
                 raise NotImplementedError
             self.submodules.jtag = jtag

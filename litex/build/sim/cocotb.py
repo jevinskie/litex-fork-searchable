@@ -29,6 +29,11 @@ class SimService(rpyc.Service):
     exposed_soc = None
     exposed_ns = None
 
+    def exposed_call_on_server(self, func):
+        res = None
+        res = func(self.exposed_platform, self.exposed_soc, self.exposed_ns)
+        return res
+
 
 class SimServer:
     def __init__(self, socket_path: str):
@@ -41,7 +46,7 @@ class SimServer:
         rpyc.lib.spawn(lambda: self.srv.start())
 
     def __del__(self):
-            sim_server.close()
+            self.srv.close()
             os.remove(self.socket_path)
 
 
@@ -87,7 +92,7 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 
 def _run_sim(build_name: str, platform, soc, namespace):
-    global sim_server
+    # global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
     local_sim_server.srv.service.exposed_platform = platform

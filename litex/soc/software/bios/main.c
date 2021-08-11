@@ -125,6 +125,9 @@ int main(int i, char **c)
 #ifdef CONFIG_L2_SIZE
 	printf("\e[1mL2\e[0m:\t\t%dKiB\n", CONFIG_L2_SIZE/1024);
 #endif
+#ifdef CSR_SPIFLASH_CORE_BASE
+	printf("\e[1mFLASH\e[0m:\t\t%dKiB\n", SPIFLASH_MODULE_TOTAL_SIZE/1024);
+#endif
 #ifdef MAIN_RAM_SIZE
 #ifdef CSR_SDRAM_BASE
 	printf("\e[1mSDRAM\e[0m:\t\t%dKiB %d-bit @ %dMT/s ",
@@ -145,7 +148,7 @@ int main(int i, char **c)
 
         sdr_ok = 1;
 
-#if defined(CSR_ETHMAC_BASE) || defined(CSR_SDRAM_BASE)
+#if defined(CSR_ETHMAC_BASE) || defined(CSR_SDRAM_BASE) || defined(CSR_SPIFLASH_CORE_BASE)
     printf("--========== \e[1mInitialization\e[0m ============--\n");
 #ifdef CSR_ETHMAC_BASE
 	eth_init();
@@ -157,13 +160,13 @@ int main(int i, char **c)
 	sdr_ok = memtest();
 #endif
 #endif
-	if (sdr_ok !=1)
+	if (sdr_ok != 1)
 		printf("Memory initialization failed\n");
-	printf("\n");
 #endif
-#ifdef CSR_SPIFLASH_MMAP_BASE
+#ifdef CSR_SPIFLASH_CORE_BASE
 	spiflash_init();
 #endif
+printf("\n");
 
 #ifdef CSR_VIDEO_FRAMEBUFFER_BASE
 	/* Initialize Video Framebuffer FIXME: Move */

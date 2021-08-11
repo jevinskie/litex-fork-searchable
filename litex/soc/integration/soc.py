@@ -894,9 +894,23 @@ class SoC(Module):
             self.cpu.add_cfu(cfu_filename=cfu)
 
         # Update SoC with CPU constraints.
+        # IOs regions.
         for n, (origin, size) in enumerate(self.cpu.io_regions.items()):
             self.bus.add_region("io{}".format(n), SoCIORegion(origin=origin, size=size, cached=False))
-        self.mem_map.update(self.cpu.mem_map) # FIXME
+        # Mapping.
+        if isinstance(self.cpu, cpu.CPUNone):
+            # With CPUNone, give priority to User's mapping.
+            self.mem_map = {**self.cpu.mem_map, **self.mem_map}
+        else:
+            # Override User's mapping with CPU constrainted mapping (and warn User).
+            for n, origin in self.cpu.mem_map.items():
+                if n in self.mem_map.keys():
+                    self.logger.info("CPU {} {} mapping from {} to {}.".format(
+                        colorer("overriding", color="cyan"),
+                        colorer(n),
+                        colorer(f"0x{self.mem_map[n]:x}"),
+                        colorer(f"0x{self.cpu.mem_map[n]:x}")))
+            self.mem_map.update(self.cpu.mem_map)
 
         # Add Bus Masters/CSR/IRQs.
         if not isinstance(self.cpu, (cpu.CPUNone, cpu.Zynq7000)):
@@ -1477,27 +1491,41 @@ class LiteXSoC(SoC):
             self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
 
     # Add SPI Flash --------------------------------------------------------------------------------
-    def add_spi_flash(self, name="spiflash", mode="4x", dummy_cycles=None, clk_freq=None):
-        # Imports.
-        from litex.soc.cores.spi_flash import SpiFlash
+    def add_spi_flash(self, name="spiflash", mode="4x", dummy_cycles=None, clk_freq=None, module=None, **kwargs):
+        if module is None:
+            # Use previous LiteX SPI Flash core with compat, will be deprecated at some point.
+            from litex.compat.soc_add_spi_flash import add_spi_flash
+            add_spi_flash(self, name, mode, dummy_cycles)
+        # LiteSPI.
+        else:
+            # Imports.
+            from litespi.phy.generic import LiteSPIPHY
+            from litespi import LiteSPI
+            from litespi.opcodes import SpiNorFlashOpCodes
 
-        # Checks.
-        assert dummy_cycles is not None # FIXME: Get dummy_cycles from SPI Flash
-        assert mode in ["1x", "4x"]
-        if clk_freq is None: clk_freq = self.clk_freq/2 # FIXME: Get max clk_freq from SPI Flash
+            # Checks/Parameters.
+            assert mode in ["1x", "4x"]
+            if clk_freq is None: clk_freq = self.sys_clk_freq
 
-        # Core.
-        self.check_if_exists(name)
-        spiflash = SpiFlash(
-            pads  = self.platform.request(name if mode == "1x" else name + mode),
-            dummy = dummy_cycles,
-            div   = ceil(self.clk_freq/clk_freq),
-            with_bitbang = True,
-            endianness   = self.cpu.endianness)
-        spiflash.add_clk_primitive(self.platform.device)
-        setattr(self.submodules, name, spiflash)
-        spiflash_region = SoCRegion(origin=self.mem_map.get(name, None), size=0x1000000) # FIXME: Get size from SPI Flash
-        self.bus.add_slave(name=name, slave=spiflash.bus, region=spiflash_region)
+            # Core.
+            self.check_if_exists(name + "_phy")
+            self.check_if_exists(name + "_mmap")
+            spiflash_pads   = self.platform.request(name if mode == "1x" else name + mode)
+            spiflash_phy    = LiteSPIPHY(spiflash_pads, module, default_divisor=int(self.sys_clk_freq/clk_freq))
+            spiflash_core   = LiteSPI(spiflash_phy, clk_freq=clk_freq, mmap_endianness=self.cpu.endianness, **kwargs)
+            setattr(self.submodules, name + "_phy",  spiflash_phy)
+            setattr(self.submodules, name + "_core", spiflash_core)
+            spiflash_region = SoCRegion(origin=self.mem_map.get(name, None), size=module.total_size)
+            self.bus.add_slave(name=name, slave=spiflash_core.bus, region=spiflash_region)
+
+            # Constants.
+            self.add_constant("SPIFLASH_MODULE_NAME",       module.name.upper())
+            self.add_constant("SPIFLASH_MODULE_TOTAL_SIZE", module.total_size)
+            self.add_constant("SPIFLASH_MODULE_PAGE_SIZE",  module.page_size)
+            if SpiNorFlashOpCodes.READ_1_1_4 in module.supported_opcodes:
+                self.add_constant("SPIFLASH_MODULE_QUAD_CAPABLE")
+            if SpiNorFlashOpCodes.READ_4_4_4 in module.supported_opcodes:
+                self.add_constant("SPIFLASH_MODULE_QPI_CAPABLE")
 
     # Add SPI SDCard -------------------------------------------------------------------------------
     def add_spi_sdcard(self, name="spisdcard", spi_clk_freq=400e3, software_debug=False):
@@ -1563,14 +1591,18 @@ class LiteXSoC(SoC):
         # Interrupts.
         self.submodules.sdirq = EventManager()
         self.sdirq.card_detect   = EventSourcePulse(description="SDCard has been ejected/inserted.")
-        self.sdirq.block2mem_dma = EventSourcePulse(description="Block2Mem DMA terminated.")
-        self.sdirq.mem2block_dma = EventSourcePulse(description="Mem2Block DMA terminated.")
+        if "read" in mode:
+            self.sdirq.block2mem_dma = EventSourcePulse(description="Block2Mem DMA terminated.")
+        if "write" in mode:
+            self.sdirq.mem2block_dma = EventSourcePulse(description="Mem2Block DMA terminated.")
         self.sdirq.cmd_done      = EventSourceLevel(description="Command completed.")
         self.sdirq.finalize()
+        if "read" in mode:
+            self.comb += self.sdirq.block2mem_dma.trigger.eq(self.sdblock2mem.irq)
+        if "write" in mode:
+            self.comb += self.sdirq.mem2block_dma.trigger.eq(self.sdmem2block.irq)
         self.comb += [
             self.sdirq.card_detect.trigger.eq(self.sdphy.card_detect_irq),
-            self.sdirq.block2mem_dma.trigger.eq(self.sdblock2mem.irq),
-            self.sdirq.mem2block_dma.trigger.eq(self.sdmem2block.irq),
             self.sdirq.cmd_done.trigger.eq(self.sdcore.cmd_event.fields.done)
         ]
         if self.irq.enabled:

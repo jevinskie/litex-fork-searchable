@@ -57,7 +57,7 @@ def start_sim_server(socket_path=None):
         server = SimServer(socket_path)
         return server
     elif cocotb.top is not None and socket_path is None:
-        socket_path = f'{os.environ["TOPLEVEL"]}.pipe'
+        socket_path = f'{os.environ["MODULE"]}.pipe'
         return rpyc.utils.factory.unix_connect(socket_path)
     else:
         raise RuntimeError

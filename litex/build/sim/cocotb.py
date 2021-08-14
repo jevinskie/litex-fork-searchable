@@ -63,8 +63,13 @@ def start_sim_server(socket_path=None):
         raise RuntimeError
 
 
-def _generate_sim_makefile(build_dir: str, build_name: str, sources: list[str], module):
+def _generate_sim_makefile(build_dir: str, build_name: str, sources: list[str], module, sim_top = None):
     assert all([lambda src: src[1] == "verilog"])
+
+    toplevel = build_name
+    if sim_top:
+        toplevel = sim_top.stem
+        sources.append((str(sim_top), "verilog"))
 
     module_dir = Path(module.__file__).parent
 
@@ -75,7 +80,7 @@ TOPLEVEL_LANG = verilog
 VERILOG_SOURCES += {' '.join(map(lambda src: src[0], sources))}
 
 # TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file
-TOPLEVEL = {build_name}
+TOPLEVEL = {toplevel}
 
 # MODULE is the basename of the Python test file
 MODULE = {build_name}
@@ -92,7 +97,6 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 
 def _run_sim(build_name: str, platform, soc, namespace):
-    # global sim_server
     socket_path = f'{build_name}.pipe'
     local_sim_server = start_sim_server(socket_path)
     local_sim_server.srv.service.exposed_platform = platform
@@ -124,9 +128,15 @@ class SimCocotbToolchain:
             trace_end    = -1,
             trace_exit   = False,
             sim_end      = -1,
+            sim_top      = None,
             regular_comb = False,
             module       = None,
             soc          = None):
+
+
+        if sim_top:
+            sim_top = Path(sim_top)
+            sim_top = sim_top.resolve()
 
         # Create build directory
         os.makedirs(build_dir, exist_ok=True)
@@ -151,7 +161,7 @@ class SimCocotbToolchain:
             platform.add_source(v_file)
 
             # Generate cocotb makefile
-            _generate_sim_makefile(build_dir, build_name, platform.sources, module)
+            _generate_sim_makefile(build_dir, build_name, platform.sources, module, sim_top)
 
         # Run
         if run:

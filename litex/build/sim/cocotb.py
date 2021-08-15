@@ -24,6 +24,14 @@ from rpyc.utils.server import ThreadedServer, ThreadPoolServer
 import cocotb
 
 
+pydev_host = os.environ.get('PYDEV_HOST', None)
+pydev_port = os.environ.get('PYDEV_PORT', None)
+
+if pydev_port is not None:
+    import pydevd
+    pydevd.settrace(pydev_host, port=int(pydev_port), suspend=False)
+
+
 class SimService(rpyc.Service):
     exposed_platform = None
     exposed_soc = None
@@ -102,6 +110,16 @@ def _run_sim(build_name: str, platform, soc, namespace):
     local_sim_server.srv.service.exposed_platform = platform
     local_sim_server.srv.service.exposed_soc = soc
     local_sim_server.srv.service.exposed_ns = namespace
+    try:
+        import pydevd
+        pydevd_setup = pydevd.SetupHolder.setup
+        if pydevd_setup is not None:
+            host, port = pydevd.dispatch()
+            os.environ['PYDEV_HOST'] = host
+            os.environ['PYDEV_PORT'] = str(port)
+            print(f'set environ to host: {host} port: {port}')
+    except ImportError:
+        pass
     try:
         r = subprocess.call(["make"])
         if r != 0:

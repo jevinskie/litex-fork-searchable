@@ -232,8 +232,8 @@ class SoCCore(LiteXSoC):
     def initialize_rom(self, data):
         self.init_rom(name="rom", contents=data)
 
-    def add_wb_master(self, wbm):
-        self.bus.add_master(master=wbm)
+    def add_wb_master(self, wbm, name: str = None):
+        self.bus.add_master(master=wbm, name=name)
 
     def add_wb_slave(self, address, interface, size=None):
         wb_name = None

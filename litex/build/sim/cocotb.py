@@ -169,7 +169,7 @@ class SimCocotbToolchain:
         # Generate verilog
         v_output = platform.get_verilog(fragment,
             name            = build_name,
-            dummy_signal    = False,
+            dummy_signal    = True,
             regular_comb    = regular_comb,
             blocking_assign = True)
         named_sc, named_pc = platform.resolve_signals(v_output.ns)

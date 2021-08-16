@@ -161,20 +161,21 @@ class SimCocotbToolchain:
         cwd = os.getcwd()
         os.chdir(build_dir)
 
-        if build:
-            # Finalize design
-            if not isinstance(fragment, _Fragment):
-                fragment = fragment.get_fragment()
-            platform.finalize(fragment)
+        # Finalize design
+        if not isinstance(fragment, _Fragment):
+            fragment = fragment.get_fragment()
+        platform.finalize(fragment)
 
-            # Generate verilog
-            v_output = platform.get_verilog(fragment,
-                name            = build_name,
-                dummy_signal    = False,
-                regular_comb    = regular_comb,
-                blocking_assign = True)
-            named_sc, named_pc = platform.resolve_signals(v_output.ns)
-            v_file = build_name + ".v"
+        # Generate verilog
+        v_output = platform.get_verilog(fragment,
+            name            = build_name,
+            dummy_signal    = False,
+            regular_comb    = regular_comb,
+            blocking_assign = True)
+        named_sc, named_pc = platform.resolve_signals(v_output.ns)
+        v_file = build_name + ".v"
+
+        if build:
             v_output.write(v_file)
             platform.add_source(v_file)
 

@@ -8,7 +8,7 @@
 from migen import *
 from migen.fhdl.module import Module
 from migen.fhdl.specials import Instance
-from migen.genlib.resetsync import AsyncResetSynchronizer
+from migen.genlib.resetsync import AsyncResetSynchronizer, AsyncResetSingleStageSynchronizer
 
 from litex.build.io import *
 
@@ -40,6 +40,26 @@ class SimAsyncResetSynchronizer:
     def lower(dr):
         return SimAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
+
+class SimAsyncResetSingleStageSynchronizerImpl(Module):
+    def __init__(self, cd, async_reset):
+        self.specials += [
+            Instance("GenericDFF",
+                i_d    = 0,
+                i_clk  = cd.clk,
+                i_r    = 0,
+                i_s    = async_reset,
+                o_q    = cd.rst
+            ),
+        ]
+
+
+class SimAsyncResetSingleStageSynchronizer:
+    @staticmethod
+    def lower(dr):
+        return SimAsyncResetSingleStageSynchronizerImpl(dr.cd, dr.async_reset)
+
+
 class CocotbVCDDumperSpecial(Special):
     def __init__(self):
         super().__init__()
@@ -70,4 +90,5 @@ end
 
 sim_special_overrides = {
     AsyncResetSynchronizer: SimAsyncResetSynchronizer,
+    AsyncResetSingleStageSynchronizer: SimAsyncResetSingleStageSynchronizer,
 }

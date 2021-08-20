@@ -111,6 +111,7 @@ class XilinxVivadoToolchain:
         "ars_ff1":         ("ars_ff1",    "true"), # user-defined attribute
         "ars_ff2":         ("ars_ff2",    "true"), # user-defined attribute
         "arsss_ff":        ("arsss_ff",   "true"), # user-defined attribute
+        "rd_ff":           ("rd_ff",      "true"), # user-defined attribute
         "no_shreg_extract": None
     }
 
@@ -311,6 +312,20 @@ class XilinxVivadoToolchain:
             "set_false_path -quiet "
             "-to [get_pins -filter {{REF_PIN_NAME == PRE}} "
                 "-of_objects [get_cells -hierarchical -filter {{arsss_ff == TRUE}}]]"
+        )
+        # The reset delay thingy is a false path
+        platform.add_platform_command(
+            "set_false_path -quiet "
+            "-to [get_pins -filter {{REF_PIN_NAME == D}} "
+                "-of_objects [get_cells -hierarchical -filter {{rd_ff == TRUE}}]]"
+        )
+        # clock_period-2ns to cargo cult
+        platform.add_platform_command(
+            "set_max_delay 2 -quiet "
+            "-from [get_pins -filter {{REF_PIN_NAME == C}} "
+                "-of_objects [get_cells -hierarchical -filter {{rd_ff == TRUE}}]] "
+            "-to [get_pins -filter {{REF_PIN_NAME == D}} "
+                "-of_objects [get_cells -hierarchical -filter {{rd_ff == TRUE}}]]"
         )
 
     def build(self, platform, fragment,

@@ -104,7 +104,7 @@ class XilinxAsyncResetSingleStageSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
         self.specials += [
             Instance("FDPE",
-                attr   = {"async_reg", "ars_ff2"},
+                attr   = {"async_reg", "arsss_ff"},
                 p_INIT = 1,
                 i_PRE  = async_reset,
                 i_CE   = 1,

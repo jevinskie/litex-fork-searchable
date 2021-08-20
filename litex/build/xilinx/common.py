@@ -15,7 +15,7 @@ from migen.fhdl.structure import *
 from migen.fhdl.specials import Instance, Tristate
 from migen.fhdl.module import Module
 from migen.genlib.cdc import *
-from migen.genlib.resetsync import AsyncResetSynchronizer
+from migen.genlib.resetsync import AsyncResetSynchronizer, AsyncResetSingleStageSynchronizer
 
 from litex.build.io import *
 from litex.build import tools
@@ -98,6 +98,28 @@ class XilinxAsyncResetSynchronizer:
     def lower(dr):
         return XilinxAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
+# Common AsyncResetSynchronizer --------------------------------------------------------------------
+
+class XilinxAsyncResetSingleStageSynchronizerImpl(Module):
+    def __init__(self, cd, async_reset):
+        self.specials += [
+            Instance("FDPE",
+                attr   = {"async_reg", "ars_ff2"},
+                p_INIT = 1,
+                i_PRE  = async_reset,
+                i_CE   = 1,
+                i_C    = cd.clk,
+                i_D    = 0,
+                o_Q    = cd.rst
+            )
+        ]
+
+
+class XilinxAsyncResetSingleStageSynchronizer:
+    @staticmethod
+    def lower(dr):
+        return XilinxAsyncResetSingleStageSynchronizerImpl(dr.cd, dr.async_reset)
+
 # Common DifferentialInput -------------------------------------------------------------------------
 
 class XilinxDifferentialInputImpl(Module):
@@ -157,6 +179,7 @@ class XilinxSDRTristate:
 xilinx_special_overrides = {
     MultiReg:               XilinxMultiReg,
     AsyncResetSynchronizer: XilinxAsyncResetSynchronizer,
+    AsyncResetSingleStageSynchronizer: XilinxAsyncResetSingleStageSynchronizer,
     DifferentialInput:      XilinxDifferentialInput,
     DifferentialOutput:     XilinxDifferentialOutput,
     SDRTristate:            XilinxSDRTristate,

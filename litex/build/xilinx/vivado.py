@@ -110,7 +110,7 @@ class XilinxVivadoToolchain:
         "mr_ff":           ("mr_ff",      "true"), # user-defined attribute
         "ars_ff1":         ("ars_ff1",    "true"), # user-defined attribute
         "ars_ff2":         ("ars_ff2",    "true"), # user-defined attribute
-        "arsss_ff":        ("arsss_ff",   "true"),  # user-defined attribute
+        "arsss_ff":        ("arsss_ff",   "true"), # user-defined attribute
         "no_shreg_extract": None
     }
 
@@ -310,7 +310,7 @@ class XilinxVivadoToolchain:
         platform.add_platform_command(
             "set_false_path -quiet "
             "-to [get_pins -filter {{REF_PIN_NAME == PRE}} "
-                "-of_objects [get_cells -hierarchical -filter {{arsss_ff == TRUE }}]]"
+                "-of_objects [get_cells -hierarchical -filter {{arsss_ff == TRUE}}]]"
         )
 
     def build(self, platform, fragment,

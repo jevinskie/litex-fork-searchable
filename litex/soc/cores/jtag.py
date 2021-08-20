@@ -307,9 +307,6 @@ class XilinxJTAG(Module):
 
         assert 1 <= chain <= 4
 
-        self.submodules.tap_fsm = JTAGTAPFSM(self.tms, self.tck)
-        # self.submodules.tap_fsm_ckinv = JTAGTAPFSM(self.tms, ~self.tck, ResetSignal("sys"))
-
         # # #
 
         self.specials += Instance(primitive,

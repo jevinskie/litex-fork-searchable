@@ -280,12 +280,12 @@ class XilinxVivadoToolchain:
             "create_clock -name jtag_tck -period 25 "
             "[get_pins -of "
             "[get_cells -hier * -filter {{LIB_CELL =~ BSCAN*}}] "
-            "-filter {{name =~ */*/TCK}}]")
+            "-filter {{name =~ */TCK}}]")
         platform.add_platform_command(
             "create_clock -name jtag_drck -period 25 "
             "[get_pins -of "
             "[get_cells -hier * -filter {{LIB_CELL =~ BSCAN*}}] "
-            "-filter {{name =~ */*/DRCK}}]")
+            "-filter {{name =~ */DRCK}}]")
 
         for from_, to in sorted(self.false_paths,
                                 key=lambda x: (x[0].duid, x[1].duid)):

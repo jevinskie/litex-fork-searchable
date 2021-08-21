@@ -270,10 +270,6 @@ class XilinxVivadoToolchain:
 
     def _build_clock_constraints(self, platform):
         platform.add_platform_command(_xdc_separator("Clock constraints"))
-        for clk, period in sorted(self.clocks.items(), key=lambda x: x[0].duid):
-            platform.add_platform_command(
-                "create_clock -name {clk} -period " + str(period) +
-                " [get_nets {clk}]", clk=clk)
 
         # JTAG 40 MHz
         platform.add_platform_command(
@@ -286,6 +282,24 @@ class XilinxVivadoToolchain:
             "[get_pins -of "
             "[get_cells -hier * -filter {{LIB_CELL =~ BSCAN*}}] "
             "-filter {{name =~ */DRCK}}]")
+
+        for clk, period in sorted(self.clocks.items(), key=lambda x: x[0].duid):
+            platform.add_platform_command(
+                "create_clock -name {clk} -period " + str(period) +
+                " [get_nets {clk}]", clk=clk)
+            platform.add_platform_command(
+                "set_clock_groups "
+                "-group [get_clocks -include_generated_clocks -of [get_nets {from_}]] "
+                "-group jtag_tck "
+                "-asynchronous",
+                from_=clk)
+            platform.add_platform_command(
+                "set_clock_groups "
+                "-group [get_clocks -include_generated_clocks -of [get_nets {from_}]] "
+                "-group jtag_drck "
+                "-asynchronous",
+                from_=clk)
+
 
         for from_, to in sorted(self.false_paths,
                                 key=lambda x: (x[0].duid, x[1].duid)):

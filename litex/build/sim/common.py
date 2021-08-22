@@ -16,11 +16,11 @@ from litex.build.io import *
 
 class SimAsyncClockMuxImpl(Module):
     def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
-        clk1_sel_meta = Signal()
-        clk1_ff2_q = Signal()
+        clk1_sel_meta = Signal(name_override=f'acm_cd1_{cd_1.name}_clk1_sel_meta')
+        clk1_ff2_q = Signal(name_override=f'acm_cd1_{cd_1.name}_clk1_ff2_q')
 
-        clk0_sel_meta = Signal()
-        clk0_ff2_q = Signal()
+        clk0_sel_meta = Signal(name_override=f'acm_cd0_{cd_0.name}_clk0_sel_meta')
+        clk0_ff2_q = Signal(name_override=f'acm_cd0_{cd_0.name}_clk0_ff2_q')
 
         self.specials += [
             Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff0',
@@ -66,7 +66,10 @@ class SimAsyncClockMux:
 
 class SimAsyncResetSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
-        rst_meta = Signal()
+        if not hasattr(async_reset, "attr"):
+            i, async_reset = async_reset, Signal(name_override=f'ars_cd_{cd.name}_async_reset')
+            self.comb += async_reset.eq(i)
+        rst_meta = Signal(name_override=f'ars_cd_{cd.name}_rst_meta')
         self.specials += [
             Instance("GenericDFF", name=f'ars_cd_{cd.name}_ff0',
                 i_d    = 0,

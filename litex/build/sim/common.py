@@ -8,9 +8,59 @@
 from migen import *
 from migen.fhdl.module import Module
 from migen.fhdl.specials import Instance
+from migen.genlib.cdc import AsyncClockMux
 from migen.genlib.resetsync import AsyncResetSynchronizer, AsyncResetSingleStageSynchronizer
 
 from litex.build.io import *
+
+
+class SimAsyncClockMuxImpl(Module):
+    def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
+        clk1_sel_meta = Signal()
+        clk1_ff2_q = Signal()
+
+        clk0_sel_meta = Signal()
+        clk0_ff2_q = Signal()
+
+        self.specials += [
+            Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff0',
+                i_d    = sel & ~clk0_ff2_q,
+                i_clk  = cd_1.clk,
+                i_r    = 0,
+                i_s    = 0,
+                o_q    = clk1_sel_meta
+            ),
+            Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff1',
+                i_d    = clk1_sel_meta,
+                i_clk  = ~cd_1.clk,
+                i_r    = 0,
+                i_s    = 0,
+                o_q    = clk1_ff2_q
+            ),
+            Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_ff0',
+                i_d    = ~sel & ~clk1_ff2_q,
+                i_clk  = cd_0.clk,
+                i_r    = 0,
+                i_s    = 0,
+                o_q    = clk0_sel_meta
+            ),
+            Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_ff1',
+                i_d    = clk0_sel_meta,
+                i_clk  = ~cd_0.clk,
+                i_r    = 0,
+                i_s    = 0,
+                o_q    = clk0_ff2_q
+            )
+        ]
+
+        self.comb += cd_out.clk.eq((cd_1.clk & clk1_ff2_q) | (cd_0.clk & clk0_ff2_q))
+
+
+class SimAsyncClockMux:
+    @staticmethod
+    def lower(dr):
+        return SimAsyncClockMuxImpl(dr.cd_0, dr.cd_1, dr.cd_out, dr.sel)
+
 
 # Common AsyncResetSynchronizer --------------------------------------------------------------------
 
@@ -18,14 +68,14 @@ class SimAsyncResetSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
         rst_meta = Signal()
         self.specials += [
-            Instance("GenericDFF",
+            Instance("GenericDFF", name=f'ars_cd_{cd.name}_ff0',
                 i_d    = 0,
                 i_clk  = cd.clk,
                 i_r    = 0,
                 i_s    = async_reset,
                 o_q    = rst_meta
             ),
-            Instance("GenericDFF",
+            Instance("GenericDFF", name=f'ars_cd_{cd.name}_ff1',
                 i_d    = rst_meta,
                 i_clk  = cd.clk,
                 i_r    = 0,
@@ -44,7 +94,7 @@ class SimAsyncResetSynchronizer:
 class SimAsyncResetSingleStageSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):
         self.specials += [
-            Instance("GenericDFF",
+            Instance("GenericDFF", name=f'arsss_cd_{cd.name}_ff',
                 i_d    = 0,
                 i_clk  = cd.clk,
                 i_r    = 0,
@@ -89,6 +139,7 @@ end
 # Special Overrides --------------------------------------------------------------------------------
 
 sim_special_overrides = {
+    AsyncClockMux: SimAsyncClockMux,
     AsyncResetSynchronizer: SimAsyncResetSynchronizer,
     AsyncResetSingleStageSynchronizer: SimAsyncResetSingleStageSynchronizer,
 }

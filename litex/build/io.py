@@ -149,8 +149,9 @@ class DDROutput(Special):
 
 class CRG(Module):
     def __init__(self, clk, rst=0):
-        self.clock_domains.cd_sys = ClockDomain()
-        self.clock_domains.cd_por = ClockDomain(reset_less=True)
+        self.clock_domains.cd_sys = self.cd_sys = ClockDomain()
+        self.clock_domains.cd_por = self.cd_por = ClockDomain(reset_less=True)
+
 
         if hasattr(clk, "p"):
             clk_se = Signal()

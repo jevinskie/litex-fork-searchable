@@ -26,28 +26,28 @@ class SimAsyncClockMuxImpl(Module):
             Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff0',
                 i_d    = sel & ~clk0_ff2_q,
                 i_clk  = cd_1.clk,
-                i_r    = 0,
+                i_r    = cd_1.rst,
                 i_s    = 0,
                 o_q    = clk1_sel_meta
             ),
             Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff1',
                 i_d    = clk1_sel_meta,
                 i_clk  = ~cd_1.clk,
-                i_r    = 0,
+                i_r    = cd_1.rst,
                 i_s    = 0,
                 o_q    = clk1_ff2_q
             ),
             Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_ff0',
                 i_d    = ~sel & ~clk1_ff2_q,
                 i_clk  = cd_0.clk,
-                i_r    = 0,
+                i_r    = cd_0.rst,
                 i_s    = 0,
                 o_q    = clk0_sel_meta
             ),
             Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_ff1',
                 i_d    = clk0_sel_meta,
                 i_clk  = ~cd_0.clk,
-                i_r    = 0,
+                i_r    = cd_0.rst,
                 i_s    = 0,
                 o_q    = clk0_ff2_q
             )

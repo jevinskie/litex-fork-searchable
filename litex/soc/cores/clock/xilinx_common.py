@@ -144,8 +144,9 @@ class XilinxClocking(Module, AutoCSR):
 
     def add_reset_delay(self, cycles):
         for i in range(cycles):
-            reset = Signal()
-            self.specials += Instance("FD", i_C=self.clkin, i_D=self.reset, o_Q=reset,
+            reset = Signal(name=f'rd_reset{i}')
+            self.specials += Instance("FD", name=f'rd_ff{i}',
+                i_C=self.clkin, i_D=self.reset, o_Q=reset,
                 attr={"async_reg", "rd_ff"},)
             self.reset = reset
 

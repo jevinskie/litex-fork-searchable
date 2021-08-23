@@ -18,6 +18,7 @@ from functools import reduce
 from operator import or_
 
 from migen import *
+from migen.fhdl.specials import Special
 from migen.genlib.record import *
 from migen.genlib.misc import chooser
 from migen.util.misc import xdir
@@ -87,7 +88,7 @@ class InterconnectShared(Module):
 # CSR SRAM -----------------------------------------------------------------------------------------
 
 class SRAM(Module):
-    def __init__(self, mem_or_size, address, read_only=None, init=None, bus=None, paging=0x800, soc_bus_data_width=32):
+    def __init__(self, mem_or_size, address, port=None, read_only=None, init=None, bus=None, paging=0x800, soc_bus_data_width=32):
         if bus is None:
             bus = Interface()
         self.bus = bus
@@ -114,8 +115,11 @@ class SRAM(Module):
 
         # # #
 
-        port = mem.get_port(write_capable=not read_only)
-        self.specials += mem, port
+        if port is None:
+            port = mem.get_port(write_capable=not read_only)
+        self.specials += mem
+        if isinstance(port, Special):
+            self.specials += port
 
         sel = Signal()
         sel_r = Signal()
@@ -227,7 +231,13 @@ class CSRBankArray(Module):
                 memories = obj.get_memories()
                 for memory in memories:
                     if isinstance(memory, tuple):
-                        read_only, memory = memory
+                        if len(memory) == 2:
+                            read_only, memory = memory
+                            port = None
+                        elif len(memory) == 3:
+                            read_only, memory, port = memory
+                        else:
+                            raise ValueError
                     else:
                         read_only = False
                     mapaddr = self.address_map(name, memory)
@@ -235,6 +245,7 @@ class CSRBankArray(Module):
                         continue
                     sram_bus = Interface(*ifargs, **ifkwargs)
                     mmap = SRAM(memory, mapaddr,
+                        port      = port,
                         read_only = read_only,
                         bus       = sram_bus,
                         paging    = self.paging)

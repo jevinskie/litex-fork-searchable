@@ -280,6 +280,7 @@ def get_csr_json(csr_regions={}, constants={}, mem_regions={}):
 
     d = {
         "csr_bases":     {},
+        "csr_mem_sizes": {},
         "csr_registers": {},
         "constants":     {},
         "memories":      {},
@@ -297,6 +298,10 @@ def get_csr_json(csr_regions={}, constants={}, mem_regions={}):
                     "type": "ro" if isinstance(csr, CSRStatus) else "rw"
                 }
                 region_origin += alignment//8*size
+        else:
+            mem = region.obj
+            mem_sz = mem.width * mem.depth // 8
+            d["csr_mem_sizes"][name] = mem_sz
 
     for name, value in constants.items():
         d["constants"][name.lower()] = value.lower() if isinstance(value, str) else value
@@ -317,7 +322,10 @@ def get_csr_csv(csr_regions={}, constants={}, mem_regions={}):
     d = json.loads(get_csr_json(csr_regions, constants, mem_regions))
     r = generated_banner("#")
     for name, value in d["csr_bases"].items():
-        r += "csr_base,{},0x{:08x},,\n".format(name, value)
+        sz_str = ''
+        if name in  d["csr_mem_sizes"]:
+            sz_str = str(d["csr_mem_sizes"][name])
+        r += "csr_base,{},0x{:08x},{},\n".format(name, value, sz_str)
     for name in d["csr_registers"].keys():
         r += "csr_register,{},0x{:08x},{},{}\n".format(name,
             d["csr_registers"][name]["addr"],

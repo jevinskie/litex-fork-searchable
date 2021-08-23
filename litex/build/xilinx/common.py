@@ -123,52 +123,15 @@ class XilinxAsyncResetSingleStageSynchronizer:
 
 class XilinxAsyncClockMuxImpl(Module):
     def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
-        clk1_sel_meta = Signal(name_override=f'acm_cd1_{cd_1.name}_clk1_sel_meta')
-        clk1_ff2_q = Signal(name_override=f'acm_cd1_{cd_1.name}_clk1_ff2_q')
-
-        clk0_sel_meta = Signal(name_override=f'acm_cd0_{cd_0.name}_clk0_sel_meta')
-        clk0_ff2_q = Signal(name_override=f'acm_cd0_{cd_0.name}_clk0_ff2_q')
-
-        self.specials += [
-            Instance("FDPE", name=f'acm_cd1_{cd_1.name}_ff0',
-                attr={"async_reg", "acm_cd1_ff0"},
-                p_INIT = 1,
-                i_PRE  = 0,
-                i_CE   = 1,
-                i_C    = cd_1.clk,
-                i_D    = sel & ~clk0_ff2_q,
-                o_Q    = clk1_sel_meta,
-            ),
-            Instance("FDPE", name=f'acm_cd1_{cd_1.name}_ff1',
-                attr={"async_reg", "acm_cd1_ff1"},
-                p_INIT = 1,
-                i_PRE  = 0,
-                i_CE   = 1,
-                i_C    = ~cd_1.clk,
-                i_D    = clk1_sel_meta,
-                o_Q    = clk1_ff2_q,
-            ),
-            Instance("FDPE", name=f'acm_cd0_{cd_0.name}_ff0',
-                attr={"async_reg", "acm_cd0_ff0"},
-                p_INIT = 1,
-                i_PRE  = 0,
-                i_CE   = 1,
-                i_C    = cd_0.clk,
-                i_D    = ~sel & ~clk1_ff2_q,
-                o_Q    = clk0_sel_meta,
-            ),
-            Instance("FDPE", name=f'acm_cd0_{cd_0.name}_ff1',
-                attr={"async_reg", "acm_cd0_ff1"},
-                p_INIT = 1,
-                i_PRE  = 0,
-                i_CE   = 1,
-                i_C    = ~cd_0.clk,
-                i_D    = clk0_sel_meta,
-                o_Q    = clk0_ff2_q,
-            )
-        ]
-
-        self.comb += cd_out.clk.eq((cd_1.clk & clk1_ff2_q) | (cd_0.clk & clk0_ff2_q))
+        self.specials.clk_mux = clk_mux = Instance(
+            "BUFGMUX",
+            name=f'acm_cd0_{cd_0.name}_cd1_{cd_1.name}_mux',
+            attr={"acm_mux"},
+            i_I0 = cd_0.clk,
+            i_I1 = cd_1.clk,
+            i_S = sel,
+            o_O = cd_out.clk,
+        )
 
 
 class XilinxAsyncClockMux:

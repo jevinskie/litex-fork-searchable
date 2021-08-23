@@ -27,6 +27,7 @@ class SimAsyncClockMuxImpl(Module):
         clk0_dis = Signal(name_override=f'acm_cd0_{cd_0.name}_dis')
 
         self.specials += [
+            # Synchronizers
             Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_ff0',
                 i_d    = sel & ~clk0_en,
                 i_clk  = cd_1.clk,
@@ -56,6 +57,7 @@ class SimAsyncClockMuxImpl(Module):
                 o_q    = clk0_en
             ),
 
+            # Timers
             Instance("GenericDFF", name=f'acm_cd1_{cd_1.name}_tmr_ff0',
                 i_d    = ~sel,
                 i_clk  = cd_0.clk,
@@ -84,8 +86,6 @@ class SimAsyncClockMuxImpl(Module):
                 i_s    = 0,
                 o_q    = clk0_dis
             ),
-
-
         ]
 
         self.comb += cd_out.clk.eq((cd_1.clk & clk1_en) | (cd_0.clk & clk0_en))

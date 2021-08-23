@@ -15,7 +15,7 @@ from litex.build.io import *
 
 
 class SimAsyncClockMuxImpl(Module):
-    def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal, rst: Signal):
+    def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
         clk1_sel_meta = Signal(name_override=f'acm_cd1_{cd_1.name}_sel_meta')
         clk1_en = Signal(name_override=f'acm_cd1_{cd_1.name}_en')
         clk1_dis_meta = Signal(name_override=f'acm_cd1_{cd_1.name}_dis_meta')
@@ -73,14 +73,14 @@ class SimAsyncClockMuxImpl(Module):
             Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_tmr_ff0',
                 i_d    = sel,
                 i_clk  = cd_1.clk,
-                i_r    = rst,
+                i_r    = cd_0.clk,
                 i_s    = 0,
                 o_q    = clk0_dis_meta
             ),
             Instance("GenericDFF", name=f'acm_cd0_{cd_0.name}_tmr_ff1',
                 i_d    = clk0_dis_meta,
                 i_clk  = cd_1.clk,
-                i_r    = rst,
+                i_r    = cd_0.clk,
                 i_s    = 0,
                 o_q    = clk0_dis
             ),
@@ -94,7 +94,7 @@ class SimAsyncClockMuxImpl(Module):
 class SimAsyncClockMux:
     @staticmethod
     def lower(dr):
-        return SimAsyncClockMuxImpl(dr.cd_0, dr.cd_1, dr.cd_out, dr.sel, dr.rst)
+        return SimAsyncClockMuxImpl(dr.cd_0, dr.cd_1, dr.cd_out, dr.sel)
 
 
 # Common AsyncResetSynchronizer --------------------------------------------------------------------

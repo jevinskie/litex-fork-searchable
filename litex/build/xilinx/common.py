@@ -124,12 +124,17 @@ class XilinxAsyncResetSingleStageSynchronizer:
 class XilinxAsyncClockMuxImpl(Module):
     def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
         self.specials.clk_mux = clk_mux = Instance(
-            "BUFGMUX",
+            "BUFGCTRL",
             name=f'acm_cd0_{cd_0.name}_cd1_{cd_1.name}_mux',
             attr={"acm_mux"},
             i_I0 = cd_0.clk,
             i_I1 = cd_1.clk,
-            i_S = sel,
+            i_S0 = ~sel,
+            i_S1 = sel,
+            i_CE0 = 1,
+            i_CE1 = 1,
+            i_IGNORE0 = 1,
+            i_IGNORE1 = 0,
             o_O = cd_out.clk,
         )
 

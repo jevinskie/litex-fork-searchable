@@ -134,7 +134,7 @@ class XilinxAsyncClockMuxImpl(Module):
             i_CE0 = 1,
             i_CE1 = 1,
             i_IGNORE0 = 1,
-            i_IGNORE1 = 0,
+            i_IGNORE1 = 1,
             o_O = cd_out.clk,
         )
 

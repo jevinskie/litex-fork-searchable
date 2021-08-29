@@ -246,7 +246,7 @@ static int ethernet_new(void **sess, char *args)
   struct timeval tv_tap_read_timeout = {10, 0};
 #else
   // Mac TUN/TAP driver doesn't support kqueue - must use short timeouts to get read events
-  struct timeval tv_tap_read_timeout = {0, 1000};
+  struct timeval tv_tap_read_timeout = {0, 10000}; // 1000 seems to break SIGINT
 #endif
 
   if(!sess) {

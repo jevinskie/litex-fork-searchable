@@ -75,6 +75,7 @@ class SimTrace(Module, AutoCSR):
     def __init__(self, pin, reset=0):
         # set from software/gateware
         self.enable = CSRStorage(reset=reset)
+        self.pin = pin
         # used by simulator to start/stop dump
         self.comb += pin.eq(self.enable.storage)
 

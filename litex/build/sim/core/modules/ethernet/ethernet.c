@@ -131,59 +131,6 @@ static int ethernet_start(void *b)
   return RC_OK;
 }
 
-#ifdef __APPLE__
-#include <arpa/inet.h>
-#include <net/ethernet.h>
-#include <netinet/if_ether.h>
-
-#define ARP_MIN_LEN (sizeof(ether_header_t) + sizeof(struct ether_arp))
-#define ARP_MIN_LEN_PADDED 60
-
-static void handle_arp_requests(struct session_s *s, const void *buf, size_t len) {
-  const uint8_t *data = (const uint8_t*)buf;
-  if (len < ARP_MIN_LEN) {
-    fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
-    return;
-  }
-  const ether_header_t *ehdr = (const ether_header_t *)data;
-  if (ehdr->ether_type != htons(ETHERTYPE_ARP)) {
-    fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, htons(ETHERTYPE_ARP));
-    return;
-  }
-  const struct ether_arp *arp_req = (const struct ether_arp *)&data[sizeof(ether_header_t)];
-  if (memcmp(arp_req->arp_tpa, ipadr, sizeof(ipadr))) {
-    fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
-    return;
-  }
-  
-  fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
-  uint8_t reply_buf[ARP_MIN_LEN_PADDED] = {0};
-  memcpy(reply_buf, data, ARP_MIN_LEN);
-  ether_header_t *eth_reply_hdr = (ether_header_t*)reply_buf;
-  memcpy(eth_reply_hdr->ether_dhost, ehdr->ether_shost, sizeof(macadr));
-  memcpy(eth_reply_hdr->ether_shost, macadr, sizeof(macadr)); 
-  struct ether_arp *arp_reply = (struct ether_arp *)&reply_buf[sizeof(ether_header_t)];
-  arp_reply->ea_hdr.ar_op = htons(ARPOP_REPLY);
-  memcpy(arp_reply->arp_sha, macadr, sizeof(macadr));
-  memcpy(arp_reply->arp_spa, ipadr, sizeof(ipadr));
-  memcpy(arp_reply->arp_tha, arp_req->arp_sha, sizeof(macadr));
-  memcpy(arp_reply->arp_tpa, arp_req->arp_spa, sizeof(ipadr));
-  tapcfg_write(s->tapcfg, reply_buf, sizeof(reply_buf));
-  struct eth_packet_s *rep = malloc(sizeof(struct eth_packet_s));
-  memset(rep, 0, sizeof(struct eth_packet_s));
-  rep->len = sizeof(reply_buf);
-  memcpy(rep->data, reply_buf, sizeof(reply_buf));
-  if(!s->ethpack) {
-    s->ethpack = rep;
-  } else {
-    struct eth_packet_s *tep;
-    for(tep=s->ethpack; tep->next; tep=tep->next);
-    tep->next = rep;
-  }
-  fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
-}
-#endif
-
 void event_handler(int fd, short event, void *arg)
 {
   struct session_s *s = (struct session_s*)arg;
@@ -196,7 +143,7 @@ void event_handler(int fd, short event, void *arg)
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
     ep->len = tapcfg_read(s->tapcfg, ep->data, 2000);
-    fprintf(stderr, "eth read %d\n", (int)ep->len);
+    // fprintf(stderr, "eth read %d\n", (int)ep->len);
     assert(ep->len >= 0);
     if(ep->len < 60)
       ep->len = 60;
@@ -213,8 +160,7 @@ void event_handler(int fd, short event, void *arg)
     do {
       len = tapcfg_read(s->tapcfg, buf, sizeof(buf));
       if (len >= 0) {
-        fprintf(stderr, "eth read BLIND %d\n", len);
-        // handle_arp_requests(buf, len);
+        // fprintf(stderr, "eth read BLIND %d\n", len);
         ep = malloc(sizeof(struct eth_packet_s));
         memset(ep, 0, sizeof(struct eth_packet_s));
         ep->len = len;
@@ -427,14 +373,11 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-      fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      // fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       if (s->pcap) {
         pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
       }
-#ifdef __APPLE__
-      // handle_arp_requests(s, s->databuf, s->datalen);
-#endif
       s->datalen=0;
     }
   }

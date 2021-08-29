@@ -208,7 +208,7 @@ static void cb(int sock, short which, void *arg)
     }
 
     if (sim_time_ps > sim_end_time_ps) {
-        fprintf(stderr, "got sim finish event\n");
+        fprintf(stderr, "got sim finish due to sim_end_time event\n");
         event_base_loopbreak(base);
         break;
     }

@@ -64,7 +64,7 @@ def _generate_sim_cpp_struct(name, index, siglist):
     return content
 
 
-def _generate_sim_cpp(platform, trace=False, trace_start=0, trace_end=-1, trace_exit=False, sim_end=-1):
+def _generate_sim_cpp(platform, trace=False, trace_start=0, trace_end=-1, trace_cycles=-1, trace_exit=False, sim_end=-1):
     content = """\
 #include <assert.h>
 #include <stdio.h>
@@ -75,7 +75,7 @@ def _generate_sim_cpp(platform, trace=False, trace_start=0, trace_end=-1, trace_
 #include <verilated.h>
 #include "sim_header.h"
 
-extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int trace_exit);
+extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int cycles, int trace_exit);
 extern "C" void litex_sim_tracer_dump();
 
 extern "C" void litex_sim_dump()
@@ -97,9 +97,9 @@ extern "C" void litex_sim_init(void **out, uint64_t *p_sim_end_time_ps)
 
     sim = new Vsim;
 
-    litex_sim_init_tracer(sim, {}, {}, {});
+    litex_sim_init_tracer(sim, {}, {}, {}, {});
 
-""".format(sim_end, trace_start, trace_end, int(trace_exit))
+""".format(sim_end, trace_start, trace_end, trace_cycles, int(trace_exit))
     for args in platform.sim_requested:
         content += _generate_sim_cpp_struct(*args)
 
@@ -198,6 +198,7 @@ class SimVerilatorToolchain:
             trace_fst    = False,
             trace_start  = 0,
             trace_end    = -1,
+            trace_cycles = -1,
             trace_exit   = False,
             sim_end      = -1,
             regular_comb = False,
@@ -229,7 +230,7 @@ class SimVerilatorToolchain:
 
             # Generate cpp header/main/variables
             _generate_sim_h(platform)
-            _generate_sim_cpp(platform, trace, trace_start, trace_end, trace_exit, sim_end)
+            _generate_sim_cpp(platform, trace, trace_start, trace_end, trace_cycles, trace_exit, sim_end)
             _generate_sim_variables(platform.verilog_include_paths)
 
             # Generate sim config

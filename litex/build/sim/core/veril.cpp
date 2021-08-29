@@ -19,6 +19,7 @@ VerilatedVcdC* tfp;
 #endif
 uint64_t tfp_start;
 uint64_t tfp_end;
+int tfp_cycles = -1;
 uint64_t main_time = 0;
 Vsim *g_sim = nullptr;
 
@@ -39,11 +40,12 @@ extern "C" void litex_sim_init_cmdargs(int argc, char *argv[])
   Verilated::commandArgs(argc, argv);
 }
 
-extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int trace_exit)
+extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int cycles, int trace_exit)
 {
   Vsim *sim = (Vsim*)vsim;
   tfp_start = start;
   tfp_end = end >= 0 ? end : UINT64_MAX;
+  tfp_cycles = cycles;
   g_trace_exit = trace_exit;
   Verilated::traceEverOn(true);
 #ifdef TRACE_FST
@@ -65,6 +67,7 @@ extern "C" void litex_sim_init_tracer(void *vsim, long start, long end, int trac
 extern "C" void litex_sim_tracer_dump()
 {
   static int last_enabled = 0;
+  static int cycles_dumped = 0;
   bool dump_enabled = true;
 
   if (g_sim != nullptr) {
@@ -81,12 +84,27 @@ extern "C" void litex_sim_tracer_dump()
 
 
   // fprintf(stderr, "q de: %d le: %d s: %llu e: %llu now: %llu\n", dump_enabled, last_enabled, tfp_start, tfp_end, main_time);
-  if (dump_enabled && tfp_start <= main_time && main_time <= tfp_end) {
-    g_dump_state = 0;
-    // fprintf(stderr, "Q");
-    tfp->dump((vluint64_t) main_time);
+  if (dump_enabled) {
+    bool triggered = false;
+    if (tfp_cycles < 0) {
+        triggered = tfp_start <= main_time && main_time <= tfp_end;
+    } else {
+        triggered = tfp_start <= main_time && cycles_dumped <= tfp_cycles;
+    }
+    if (triggered) {
+        g_dump_state = 0;
+        // fprintf(stderr, "Q");
+        tfp->dump((vluint64_t) main_time);
+        ++cycles_dumped;
+    }
   }
-  if (main_time > tfp_end) {
+  bool ended = false;
+  if (tfp_cycles < 0) {
+    ended = main_time > tfp_end;
+  } else {
+    ended = cycles_dumped > tfp_cycles;
+  }
+  if (ended) {
     g_dump_state =  1;
   }
   if (g_last_dump_state != g_dump_state) {

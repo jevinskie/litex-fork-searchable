@@ -111,6 +111,7 @@ extern "C" void litex_sim_tracer_dump()
     if (g_dump_state == 0) {
       printf("<DUMP START>\n");
       fflush(stdout);
+      cycles_dumped = 0;
     } else if (g_dump_state == 1) {
       printf("<DUMP END>\n");
       fflush(stdout);

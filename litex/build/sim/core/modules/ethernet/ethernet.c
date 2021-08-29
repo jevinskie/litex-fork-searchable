@@ -15,13 +15,25 @@
 #include <event2/event.h>
 #include <json-c/json.h>
 #include <pcap/pcap.h>
-#include "tapcfg.h"
+#include <tapcfg.h>
 #include "modules.h"
+
+#ifdef __APPLE__
+#define GW
+#endif
+
+#ifdef GW
+#include <net/if.h>
+#include <sys/ioctl.h>
+#endif
 
 #define PCAP_FILENAME "./sim.pcap"
 
 static const char macadr[6] = {0xaa, 0xb6, 0x24, 0x69, 0x77, 0x21};
 static unsigned char ipadr[4] = {0};
+#ifdef GW
+static unsigned char gwipadr[4] = {0};
+#endif
 
 struct eth_packet_s {
   char data[2000];
@@ -130,24 +142,24 @@ static int ethernet_start(void *b)
 static void handle_arp_requests(struct session_s *s, const void *buf, size_t len) {
   const uint8_t *data = (const uint8_t*)buf;
   if (len < ARP_MIN_LEN) {
-    // fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
+    fprintf(stderr, "bad len. len: %zu min: %zu\n", len, ARP_MIN_LEN);
     return;
   }
   const ether_header_t *ehdr = (const ether_header_t *)data;
   if (ehdr->ether_type != htons(ETHERTYPE_ARP)) {
-    // fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, htons(ETHERTYPE_ARP));
+    fprintf(stderr, "bad type: got: %u expected: %u\n", ehdr->ether_type, htons(ETHERTYPE_ARP));
     return;
   }
   const struct ether_arp *arp_req = (const struct ether_arp *)&data[sizeof(ether_header_t)];
   if (memcmp(arp_req->arp_tpa, ipadr, sizeof(ipadr))) {
-    // fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
+    fprintf(stderr, "no ip match got: 0x%08x expected: 0x%08x\n", *(uint32_t*)&arp_req->arp_tpa, *(uint32_t*)&ipadr);
     return;
   }
   
-  // fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
+  fprintf(stderr, "got an ARP packet! src: 0x%08x\n", *(uint32_t*)arp_req->arp_spa);
   uint8_t reply_buf[ARP_MIN_LEN_PADDED] = {0};
   memcpy(reply_buf, data, ARP_MIN_LEN);
-  ether_header_t *eth_reply_hdr = (struct ether_header_t*)reply_buf;
+  ether_header_t *eth_reply_hdr = (ether_header_t*)reply_buf;
   memcpy(eth_reply_hdr->ether_dhost, ehdr->ether_shost, sizeof(macadr));
   memcpy(eth_reply_hdr->ether_shost, macadr, sizeof(macadr)); 
   struct ether_arp *arp_reply = (struct ether_arp *)&reply_buf[sizeof(ether_header_t)];
@@ -168,21 +180,24 @@ static void handle_arp_requests(struct session_s *s, const void *buf, size_t len
     for(tep=s->ethpack; tep->next; tep=tep->next);
     tep->next = rep;
   }
-  // fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
+  fprintf(stderr, "eth arp inject write %d\n", (int)sizeof(reply_buf));
 }
 #endif
 
 void event_handler(int fd, short event, void *arg)
 {
-  struct  session_s *s = (struct session_s*)arg;
+  struct session_s *s = (struct session_s*)arg;
   struct eth_packet_s *ep;
   struct eth_packet_s *tep;
+  char buf[2000];
+  int len = -1;
 
   if (event & EV_READ) {
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
     ep->len = tapcfg_read(s->tapcfg, ep->data, 2000);
-    // fprintf(stderr, "eth read %d\n", (int)ep->len);
+    fprintf(stderr, "eth read %d\n", (int)ep->len);
+    assert(ep->len >= 0);
     if(ep->len < 60)
       ep->len = 60;
 
@@ -193,6 +208,30 @@ void event_handler(int fd, short event, void *arg)
       tep->next = ep;
     }
   }
+#ifdef __APPLE__
+  else if (event & EV_TIMEOUT) {
+    do {
+      len = tapcfg_read(s->tapcfg, buf, sizeof(buf));
+      if (len >= 0) {
+        fprintf(stderr, "eth read BLIND %d\n", len);
+        // handle_arp_requests(buf, len);
+        ep = malloc(sizeof(struct eth_packet_s));
+        memset(ep, 0, sizeof(struct eth_packet_s));
+        ep->len = len;
+        memcpy(ep->data, buf, len);
+        if(ep->len < 60)
+          ep->len = 60;
+
+        if(!s->ethpack)
+          s->ethpack = ep;
+        else {
+          for(tep=s->ethpack; tep->next; tep=tep->next);
+          tep->next = ep;
+        }
+      }
+    } while (len >= 0);
+  }
+#endif
 }
 
 
@@ -201,8 +240,15 @@ static int ethernet_new(void **sess, char *args)
   int ret = RC_OK;
   char *c_tap = NULL;
   char *c_tap_ip = NULL;
+  char *ifname = NULL;
   struct session_s *s = NULL;
-  struct timeval tv = {10, 0};
+#ifndef __APPLE__
+  struct timeval tv_tap_read_timeout = {10, 0};
+#else
+  // Mac TUN/TAP driver doesn't support kqueue - must use short timeouts to get read events
+  struct timeval tv_tap_read_timeout = {0, 1000};
+#endif
+
   if(!sess) {
     ret = RC_INVARG;
     goto out;
@@ -226,10 +272,17 @@ static int ethernet_new(void **sess, char *args)
       goto out;
   }
 
-  struct in_addr ia;
+  struct in_addr ia, ia_gw;
   int inet_aton_res = inet_aton(c_tap_ip, &ia);
   assert(inet_aton_res == 1);
   memcpy(ipadr, &ia.s_addr, sizeof(ipadr));
+#ifdef GW
+  char c_gw_ip[16] = {0};
+  snprintf(c_gw_ip, sizeof(c_gw_ip), "%d.%d.%d.1", ipadr[0], ipadr[1], ipadr[2]);
+  inet_aton_res = inet_aton(c_gw_ip, &ia_gw);
+  assert(inet_aton_res == 1);
+  memcpy(gwipadr, &ia_gw.s_addr, sizeof(gwipadr));
+#endif
 
   s->tapcfg = tapcfg_init();
   tapcfg_start(s->tapcfg, c_tap, 0);
@@ -244,14 +297,33 @@ static int ethernet_new(void **sess, char *args)
   assert(!close(sysctl_fd));
 #endif
 
+  ifname = tapcfg_get_ifname(s->tapcfg);
   s->fd = tapcfg_get_fd(s->tapcfg);
+#ifdef __APPLE__
+  // don't block during speculative, timer callback reads
+  fcntl(s->fd, F_SETFL, fcntl(s->fd, F_GETFL, 0) | O_NONBLOCK);
+#endif
   tapcfg_iface_set_hwaddr(s->tapcfg, macadr, 6);
+#ifndef GW
   tapcfg_iface_set_ipv4(s->tapcfg, c_tap_ip, 24);
-  tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
+#else
+  tapcfg_iface_set_ipv4(s->tapcfg, c_gw_ip, 24);
+  tapcfg_iface_add_ipv4(s->tapcfg, c_tap_ip, 32);  // TODO: Why 32?
+  char route_cmd_buf[256] = {0};
+  snprintf(route_cmd_buf, sizeof(route_cmd_buf),
+    "route add %d.%d.%d.%d -ifp tap%d %d.%d.%d.%d",
+    ipadr[0], ipadr[1], ipadr[2], ipadr[3],
+    atoi(&ifname[3]),
+    gwipadr[0], gwipadr[1], gwipadr[2], gwipadr[3]
+  );
+  fprintf(stderr, "running '%s'\n", route_cmd_buf);
+  ret = system(route_cmd_buf);
+  assert(!ret);
+#endif
   free(c_tap_ip);
 
   s->ev = event_new(base, s->fd, EV_READ | EV_PERSIST, event_handler, s);
-  event_add(s->ev, &tv);
+  event_add(s->ev, &tv_tap_read_timeout);
 
   char pcap_errbuf[PCAP_ERRBUF_SIZE];
   // int pcap_init_res = pcap_init(PCAP_CHAR_ENC_UTF_8, pcap_errbuf);
@@ -306,6 +378,8 @@ static int ethernet_new(void **sess, char *args)
     assert(0);
   }
 
+  tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
+
 out:
   *sess=(void*)s;
   return ret;
@@ -343,10 +417,6 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
   struct session_s *s = (struct session_s*)sess;
   struct eth_packet_s *pep;
 
-  if (s->pcap) {
-    pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
-  }
-
   if(!clk_pos_edge(&edge, *s->sys_clk)) {
     return RC_OK;
   }
@@ -357,10 +427,13 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-      // fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
+      if (s->pcap) {
+        pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
+      }
 #ifdef __APPLE__
-      handle_arp_requests(s, s->databuf, s->datalen);
+      // handle_arp_requests(s, s->databuf, s->datalen);
 #endif
       s->datalen=0;
     }
@@ -381,6 +454,9 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
       pep=s->ethpack->next;
       free(s->ethpack);
       s->ethpack=pep;
+      if (s->pcap) {
+        pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
+      }
     }
   }
   return RC_OK;
@@ -390,10 +466,11 @@ static int ethernet_close(void *sess)
 {
   int ret = RC_OK;
   struct session_s *s = (struct session_s*)sess;
-  pcap_dump_flush(s->pcap_dumper);
-  pcap_dump_close(s->pcap_dumper);
-  pcap_close(s->pcap);
-  fprintf(stderr, "did teh close\n");
+  if (s->pcap) {
+    pcap_dump_flush(s->pcap_dumper);
+    pcap_dump_close(s->pcap_dumper);
+    pcap_close(s->pcap);
+  }
   return ret;
 }
 

@@ -158,11 +158,11 @@ void sdram_bist(uint32_t burst_length, uint32_t random)
 		if (i%1000 == 0) {
 			printf("WR-SPEED(MiB/s) RD-SPEED(MiB/s)  TESTED(MiB)       ERRORS\n");
 		}
-		if (i%100 == 100-1) {
+		if (1 || i%100 == 100-1) {
 			printf("%15u %15u %12u %12u\n",
 			compute_speed_mibs(wr_length, wr_ticks),
 			compute_speed_mibs(rd_length, rd_ticks),
-			total_length/(1024*1024),
+			total_length,
 			total_errors);
 			total_length += wr_length;
 			total_errors += rd_errors;

@@ -62,12 +62,12 @@ class EndpointDescription:
 
 
 class Endpoint(Record):
-    def __init__(self, description_or_layout=[], name=None, **kwargs):
+    def __init__(self, description_or_layout=[], name=None, flat_naming=False, **kwargs):
         if isinstance(description_or_layout, EndpointDescription):
             self.description = description_or_layout
         else:
             self.description = EndpointDescription(description_or_layout)
-        Record.__init__(self, self.description.get_full_layout(), name, **kwargs)
+        Record.__init__(self, self.description.get_full_layout(), name, flat_naming, **kwargs)
         set_reset_less(self.first)
         set_reset_less(self.last)
         #set_reset_less(self.payload) # FIXME: cause issues with LiteSATA, understand why and uncomment.

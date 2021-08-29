@@ -75,6 +75,7 @@ extern "C" void litex_sim_tracer_dump()
     if (last_enabled == 0 && dump_enabled) {
       printf("<DUMP ON>\n");
       fflush(stdout);
+      cycles_dumped = 0;
     } else if (last_enabled == 1 && !dump_enabled) {
       printf("<DUMP OFF>\n");
       fflush(stdout);

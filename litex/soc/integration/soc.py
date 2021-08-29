@@ -1281,8 +1281,8 @@ class LiteXSoC(SoC):
 
         # LiteDRAM BIST.
         if with_bist:
-            self.submodules.sdram_generator = LiteDRAMBISTGenerator(self.sdram.crossbar.get_port())
-            self.submodules.sdram_checker = LiteDRAMBISTChecker(self.sdram.crossbar.get_port())
+            self.submodules.sdram_generator = LiteDRAMBISTGenerator(self.sdram.crossbar.get_port(name="bist_gen_port"))
+            self.submodules.sdram_checker = LiteDRAMBISTChecker(self.sdram.crossbar.get_port(name="bist_chk_port"))
 
         if not with_soc_interconnect: return
 

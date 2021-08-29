@@ -222,7 +222,9 @@ class SimVerilatorToolchain:
                 name            = build_name,
                 dummy_signal    = False,
                 regular_comb    = regular_comb,
-                blocking_assign = True)
+                blocking_assign = True,
+                reproducible    = True, # allow for build caching
+            )
             named_sc, named_pc = platform.resolve_signals(v_output.ns)
             v_file = build_name + ".v"
             v_output.write(v_file)

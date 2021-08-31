@@ -377,6 +377,7 @@ def main():
         vns = builder.build(
             build       = build,
             run         = run,
+            skip_sw_build=run,
             threads     = args.threads,
             sim_config  = sim_config,
             opt_level   = args.opt_level,
@@ -386,7 +387,7 @@ def main():
             trace_end   = trace_end,
             interactive = not args.non_interactive
         )
-        if args.with_analyzer:
+        if args.with_analyzer and build:
             soc.analyzer.export_csv(vns, "analyzer.csv")
         if args.gtkwave_savefile:
             generate_gtkw_savefile(builder, vns, args.trace_fst)

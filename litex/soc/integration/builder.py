@@ -252,7 +252,7 @@ class Builder:
         # Initialize SoC with with BIOS data.
         self.soc.initialize_rom(bios_data)
 
-    def build(self, **kwargs):
+    def build(self, skip_sw_build=False, **kwargs):
         # Pass Output Directory to Platform.
         self.soc.platform.output_dir = self.output_dir
 
@@ -284,7 +284,7 @@ class Builder:
         self._generate_csr_map()
 
         # Compile the BIOS when the SoC uses it.
-        if self.soc.cpu_type is not None:
+        if self.soc.cpu_type is not None and not skip_sw_build:
             if self.soc.cpu.use_rom:
                 # Prepare/Generate ROM software.
                 use_bios = (

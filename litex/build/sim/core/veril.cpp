@@ -79,6 +79,7 @@ extern "C" void litex_sim_tracer_dump()
     } else if (last_enabled == 1 && !dump_enabled) {
       printf("<DUMP OFF>\n");
       fflush(stdout);
+      tfp->flush();
     }
     last_enabled = (int) dump_enabled;
   }

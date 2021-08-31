@@ -12,6 +12,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 
+import multiprocessing
 import os
 import subprocess
 import struct
@@ -242,7 +243,7 @@ class Builder:
             dst_dir  = os.path.join(self.software_dir, name)
             makefile = os.path.join(src_dir, "Makefile")
             if self.compile_software:
-                subprocess.check_call(["make", "-C", dst_dir, "-f", makefile])
+                subprocess.check_call(["make", "-C", dst_dir, "-f", makefile, "-j", str(multiprocessing.cpu_count())])
 
     def _initialize_rom_software(self):
         # Get BIOS data from compiled BIOS binary.

@@ -1,5 +1,6 @@
 /* Copyright (C) 2017 LambdaConcept */
 
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,9 @@ Vsim *g_sim = nullptr;
 static int g_last_dump_state = -1;
 static int g_dump_state = -1;
 static int g_trace_exit = 0;
+static uint64_t g_trace_time_start = -1;
+static uint64_t g_trace_time_end = -1;
+static uint64_t g_trace_time = -1;
 
 
 extern "C" void litex_sim_eval(void *vsim, uint64_t time_ps)
@@ -76,10 +80,12 @@ extern "C" void litex_sim_tracer_dump()
       printf("<DUMP ON>\n");
       fflush(stdout);
       cycles_dumped = 0;
+      g_trace_time_start = main_time;
     } else if (last_enabled == 1 && !dump_enabled) {
       printf("<DUMP OFF>\n");
       fflush(stdout);
       tfp->flush();
+//      g_trace_time_end = main_time;
     }
     last_enabled = (int) dump_enabled;
   }
@@ -96,7 +102,16 @@ extern "C" void litex_sim_tracer_dump()
     if (triggered) {
         g_dump_state = 0;
         // fprintf(stderr, "Q");
-        tfp->dump((vluint64_t) main_time);
+        uint64_t fake_time = main_time;
+        if (g_trace_time_end +1 != 0) {
+            int64_t delta = (int64_t)(g_trace_time_start - g_trace_time_end);
+            int64_t min_gap = 1000000 * 100; // 100 microsecond gap
+            if (delta > min_gap) {
+                delta -= min_gap;
+            }
+            fake_time -= delta;
+        }
+        tfp->dump((vluint64_t) fake_time);
         ++cycles_dumped;
     }
   }
@@ -114,10 +129,12 @@ extern "C" void litex_sim_tracer_dump()
       printf("<DUMP START>\n");
       fflush(stdout);
       cycles_dumped = 0;
+      g_trace_time_start = main_time;
     } else if (g_dump_state == 1) {
       printf("<DUMP END>\n");
       fflush(stdout);
       tfp->flush();
+      g_trace_time_end = main_time;
     }
   }
   g_last_dump_state = g_dump_state;

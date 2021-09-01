@@ -29,7 +29,7 @@ static int g_dump_state = -1;
 static int g_trace_exit = 0;
 static uint64_t g_trace_time_start = -1;
 static uint64_t g_trace_time_end = -1;
-static uint64_t g_trace_time = -1;
+static uint64_t vcd_time = 0;
 
 
 extern "C" void litex_sim_eval(void *vsim, uint64_t time_ps)
@@ -101,17 +101,11 @@ extern "C" void litex_sim_tracer_dump()
     }
     if (triggered) {
         g_dump_state = 0;
-        // fprintf(stderr, "Q");
-        uint64_t fake_time = main_time;
-        if (g_trace_time_end +1 != 0) {
-            int64_t delta = (int64_t)(g_trace_time_start - g_trace_time_end);
-            int64_t min_gap = 1000000 * 100; // 100 microsecond gap
-            if (delta > min_gap) {
-                delta -= min_gap;
-            }
-            fake_time -= delta;
-        }
-        tfp->dump((vluint64_t) fake_time);
+        uint64_t delta = main_time - g_trace_time_start;
+        // fprintf(stderr, "g_trace_time_start: %llu g_trace_time_end: %llu main_time: %llu delta: %llu\n",
+        //   g_trace_time_start, g_trace_time_end, main_time, delta
+        // );
+        tfp->dump((vluint64_t)(vcd_time + delta));
         ++cycles_dumped;
     }
   }
@@ -135,6 +129,8 @@ extern "C" void litex_sim_tracer_dump()
       fflush(stdout);
       tfp->flush();
       g_trace_time_end = main_time;
+      vcd_time += main_time - g_trace_time_start;
+      vcd_time += 1000000 * 10; // 10 microseconds gap
     }
   }
   g_last_dump_state = g_dump_state;

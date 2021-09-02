@@ -267,6 +267,7 @@ static int ethernet_new(void **sess, char *args)
   assert(!ret);
 #endif
   free(c_tap_ip);
+  tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
 
   s->ev = event_new(base, s->fd, EV_READ | EV_PERSIST, event_handler, s);
   event_add(s->ev, &tv_tap_read_timeout);
@@ -313,7 +314,7 @@ static int ethernet_new(void **sess, char *args)
   }
   int pcap_activate_res = pcap_activate(s->pcap);
   if (pcap_activate_res) {
-    fprintf(stderr, "pcap_activate failed: %d\n", pcap_activate_res);
+    fprintf(stderr, "pcap_activate failed: %d %s\n", pcap_activate_res, pcap_geterr(s->pcap));
     // goto out;
     assert(0);
   }
@@ -323,8 +324,6 @@ static int ethernet_new(void **sess, char *args)
     // goto out;
     assert(0);
   }
-
-  tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
 
 out:
   *sess=(void*)s;

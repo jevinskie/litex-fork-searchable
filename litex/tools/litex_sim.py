@@ -90,7 +90,7 @@ class SimSoC(SoCCore):
         with_ethernet         = False,
         with_etherbone        = False,
         etherbone_mac_address = 0x10e2d5000001,
-        etherbone_ip_address  = "192.168.1.51",
+        etherbone_ip_address  = "192.168.42.51",
         with_analyzer         = False,
         sdram_module          = "MT48LC16M16",
         sdram_init            = [],
@@ -292,8 +292,8 @@ def sim_args(parser):
     parser.add_argument("--sdram-verbosity",      default=0,               help="Set SDRAM checker verbosity")
     parser.add_argument("--with-ethernet",        action="store_true",     help="Enable Ethernet support")
     parser.add_argument("--with-etherbone",       action="store_true",     help="Enable Etherbone support")
-    parser.add_argument("--local-ip",             default="192.168.100.50",  help="Local IP address of SoC (default=192.168.100.50)")
-    parser.add_argument("--remote-ip",            default="192.168.100.100", help="Remote IP address of TFTP server (default=192.168.100.100)")
+    parser.add_argument("--local-ip",             default="192.168.42.50",  help="Local IP address of SoC (default=192.168.42.50)")
+    parser.add_argument("--remote-ip",            default="192.168.42.100", help="Remote IP address of TFTP server (default=192.168.42.100)")
     parser.add_argument("--with-analyzer",        action="store_true",     help="Enable Analyzer support")
     parser.add_argument("--with-i2c",             action="store_true",     help="Enable I2C support")
     parser.add_argument("--with-sdcard",          action="store_true",     help="Enable SDCard support")

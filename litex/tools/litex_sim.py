@@ -301,6 +301,7 @@ def sim_args(parser):
     parser.add_argument("--trace-fst",            action="store_true",     help="Enable FST tracing (default=VCD)")
     parser.add_argument("--trace-start",          default="0",             help="Time to start tracing (ps)")
     parser.add_argument("--trace-end",            default="-1",            help="Time to end tracing (ps)")
+    parser.add_argument("--trace-cycles",         default=1024,            help="Number of cycles to trace")
     parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
     parser.add_argument("--sim-debug",            action="store_true",     help="Add simulation debugging modules")
     parser.add_argument("--gtkwave-savefile",     action="store_true",     help="Generate GTKWave savefile")
@@ -385,6 +386,7 @@ def main():
             trace_fst   = args.trace_fst,
             trace_start = trace_start,
             trace_end   = trace_end,
+            trace_cycles = args.trace_cycles,
             interactive = not args.non_interactive
         )
         if args.with_analyzer and build:

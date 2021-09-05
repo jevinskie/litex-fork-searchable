@@ -5,8 +5,8 @@ ifeq ($(UNAME_S),Darwin)
 	CFLAGS += -I/usr/local/include -I/opt/brew/include -I/opt/homebrew/include
 	LDFLAGS += -L/usr/local/lib -L/opt/brew/lib -L/opt/homebrew/lib
 	LDFLAGS += -lpthread -ljson-c -lm -lstdc++ -ldl -levent
-	CFLAGS += -ggdb
-	LDFLAGS += -ggdb
+	CFLAGS += -g
+	LDFLAGS += -g
 else
 	CC ?= gcc
 	CFLAGS += -ggdb

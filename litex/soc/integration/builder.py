@@ -307,9 +307,13 @@ class Builder:
         if "run" not in kwargs:
             kwargs["run"] = self.compile_gateware
 
-        # Build SoC and pass Verilog Name Space to do_exit.
-        vns = self.soc.build(build_dir=self.gateware_dir, **kwargs)
-        self.soc.do_exit(vns=vns)
+        if not kwargs["run"]:
+            # Build SoC and pass Verilog Name Space to do_exit.
+            vns = self.soc.build(build_dir=self.gateware_dir, **kwargs)
+            self.soc.do_exit(vns=vns)
+        else:
+            # Run (probably Sim)SoC.
+            vns = self.soc.build(build_dir=self.gateware_dir, **kwargs)
 
         # Generate SoC Documentation.
         if self.generate_doc:

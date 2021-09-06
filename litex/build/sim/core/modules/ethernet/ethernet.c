@@ -69,6 +69,7 @@ struct session_s {
 
 static struct event_base *base=NULL;
 
+#ifdef ETH_DEBUG
 static void dump_packet_chain(const struct session_s *s, const char *note) {
   if (!s->ethpack) {
     // fprintf(stderr, "dmp %s: s->ethpack is NULL!\n", note);
@@ -82,6 +83,7 @@ static void dump_packet_chain(const struct session_s *s, const char *note) {
     ++i;
   }
 }
+#endif
 
 int litex_sim_module_get_args(char *args, char *arg, char **val)
 {
@@ -156,7 +158,7 @@ void event_handler(int fd, short event, void *arg)
   struct eth_packet_s *ep;
   struct eth_packet_s *tep;
 
-  dump_packet_chain(s, "eh start");
+  // dump_packet_chain(s, "eh start");
 
 #ifndef USE_READ_TIMEOUT
   if (event & EV_READ) {
@@ -189,7 +191,7 @@ void event_handler(int fd, short event, void *arg)
         assert(!"eh len is ZERO!");
       }
       if (len > 0) {
-        fprintf(stderr, "eth read BLIND %d seq: %d\n", len, num_seq_reads);
+        // fprintf(stderr, "eth read BLIND %d seq: %d\n", len, num_seq_reads);
         ep = malloc(sizeof(struct eth_packet_s));
         memset(ep, 0, sizeof(struct eth_packet_s));
         ep->len = len;
@@ -198,14 +200,14 @@ void event_handler(int fd, short event, void *arg)
           ep->len = 60;
 
         if(!s->ethpack) {
-          fprintf(stderr, "eh null ethpack\n");
+          // fprintf(stderr, "eh null ethpack\n");
           s->ethpack = ep;
         }
         else {
           for(tep=s->ethpack; tep->next; tep=tep->next) {
-            fprintf(stderr, "eh iter\n");
+            // fprintf(stderr, "eh iter\n");
           }
-          fprintf(stderr, "eth PUSH\n");
+          // fprintf(stderr, "eth PUSH\n");
           tep->next = ep;
         }
       }
@@ -214,7 +216,7 @@ void event_handler(int fd, short event, void *arg)
   }
 #endif
 
-  dump_packet_chain(s, "eh end");
+  // dump_packet_chain(s, "eh end");
 }
 
 
@@ -420,7 +422,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-      fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      // fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       if (s->pcap) {
         pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
@@ -438,16 +440,16 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
       s->inlen = 0;
     }
   } else {
-    dump_packet_chain(s, "tck start");
+    // dump_packet_chain(s, "tck start");
     if(s->ethpack) {
       memcpy(s->inbuf, s->ethpack->data, s->ethpack->len);
       s->inlen = s->ethpack->len;
       pep = s->ethpack->next;
       free(s->ethpack);
       s->ethpack = pep;
-      fprintf(stderr, "eth POP\n");
+      // fprintf(stderr, "eth POP\n");
     }
-    dump_packet_chain(s, "tck end");
+    // dump_packet_chain(s, "tck end");
   }
   return RC_OK;
 }

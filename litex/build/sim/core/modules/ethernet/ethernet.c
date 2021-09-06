@@ -225,7 +225,7 @@ static int ethernet_new(void **sess, char *args)
   int ret = RC_OK;
   char *c_tap = NULL;
   char *c_tap_ip = NULL;
-#if USE_GW
+#ifdef USE_GW
   char *ifname = NULL;
 #endif
   struct session_s *s = NULL;
@@ -260,7 +260,7 @@ static int ethernet_new(void **sess, char *args)
   }
 
   struct in_addr ia;
-#if USE_GW
+#ifdef USE_GW
   struct in_addr ia_gw;
 #endif
   int inet_aton_res = inet_aton(c_tap_ip, &ia);
@@ -287,7 +287,7 @@ static int ethernet_new(void **sess, char *args)
   assert(!close(sysctl_fd));
 #endif
 
-#if USE_GW
+#ifdef USE_GW
   ifname = tapcfg_get_ifname(s->tapcfg);
 #endif
   s->fd = tapcfg_get_fd(s->tapcfg);

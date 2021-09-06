@@ -19,10 +19,15 @@
 #include "modules.h"
 
 #ifdef __APPLE__
-#define GW
+#define USE_GW
+#define USE_READ_TIMEOUT
 #endif
 
-#ifdef GW
+#ifdef __linux__
+#define USE_READ_TIMEOUT
+#endif
+
+#ifdef USE_GW
 #include <net/if.h>
 #include <sys/ioctl.h>
 #endif
@@ -31,7 +36,7 @@
 
 static const char macadr[6] = {0xaa, 0xb6, 0x24, 0x69, 0x77, 0x21};
 static unsigned char ipadr[4] = {0};
-#ifdef GW
+#ifdef USE_GW
 static unsigned char gwipadr[4] = {0};
 #endif
 
@@ -139,6 +144,7 @@ void event_handler(int fd, short event, void *arg)
   char buf[2000];
   int len = -1;
 
+#ifndef USE_READ_TIMEOUT
   if (event & EV_READ) {
     ep = malloc(sizeof(struct eth_packet_s));
     memset(ep, 0, sizeof(struct eth_packet_s));
@@ -155,12 +161,13 @@ void event_handler(int fd, short event, void *arg)
       tep->next = ep;
     }
   }
-#ifdef __APPLE__
-  else if (event & EV_TIMEOUT) {
+#else
+  if (event & EV_TIMEOUT) {
+    int num_seq_reads = 0;
     do {
       len = tapcfg_read(s->tapcfg, buf, sizeof(buf));
       if (len >= 0) {
-        // fprintf(stderr, "eth read BLIND %d\n", len);
+        fprintf(stderr, "eth read BLIND %d seq: %d\n", len, num_seq_reads);
         ep = malloc(sizeof(struct eth_packet_s));
         memset(ep, 0, sizeof(struct eth_packet_s));
         ep->len = len;
@@ -175,7 +182,8 @@ void event_handler(int fd, short event, void *arg)
           tep->next = ep;
         }
       }
-    } while (len >= 0);
+      ++num_seq_reads;
+    } while (len > 0);
   }
 #endif
 }
@@ -188,7 +196,7 @@ static int ethernet_new(void **sess, char *args)
   char *c_tap_ip = NULL;
   char *ifname = NULL;
   struct session_s *s = NULL;
-#ifndef __APPLE__
+#ifndef USE_READ_TIMEOUT
   struct timeval tv_tap_read_timeout = {10, 0};
 #else
   // Mac TUN/TAP driver doesn't support kqueue - must use short timeouts to get read events
@@ -222,7 +230,7 @@ static int ethernet_new(void **sess, char *args)
   int inet_aton_res = inet_aton(c_tap_ip, &ia);
   assert(inet_aton_res == 1);
   memcpy(ipadr, &ia.s_addr, sizeof(ipadr));
-#ifdef GW
+#ifdef USE_GW
   char c_gw_ip[16] = {0};
   snprintf(c_gw_ip, sizeof(c_gw_ip), "%d.%d.%d.1", ipadr[0], ipadr[1], ipadr[2]);
   inet_aton_res = inet_aton(c_gw_ip, &ia_gw);
@@ -245,12 +253,12 @@ static int ethernet_new(void **sess, char *args)
 
   ifname = tapcfg_get_ifname(s->tapcfg);
   s->fd = tapcfg_get_fd(s->tapcfg);
-#ifdef __APPLE__
+#ifdef USE_READ_TIMEOUT
   // don't block during speculative, timer callback reads
   fcntl(s->fd, F_SETFL, fcntl(s->fd, F_GETFL, 0) | O_NONBLOCK);
 #endif
   tapcfg_iface_set_hwaddr(s->tapcfg, macadr, 6);
-#ifndef GW
+#ifndef USE_GW
   tapcfg_iface_set_ipv4(s->tapcfg, c_tap_ip, 24);
 #else
   tapcfg_iface_set_ipv4(s->tapcfg, c_gw_ip, 24);
@@ -269,7 +277,11 @@ static int ethernet_new(void **sess, char *args)
   free(c_tap_ip);
   tapcfg_iface_set_status(s->tapcfg, TAPCFG_STATUS_ALL_UP);
 
+#ifndef USE_READ_TIMEOUT
   s->ev = event_new(base, s->fd, EV_READ | EV_PERSIST, event_handler, s);
+#else
+  s->ev = event_new(base, -1, EV_PERSIST, event_handler, s);
+#endif
   event_add(s->ev, &tv_tap_read_timeout);
 
   char pcap_errbuf[PCAP_ERRBUF_SIZE];
@@ -372,7 +384,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
-      // fprintf(stderr, "eth write %d\n", (int)s->datalen);
+      fprintf(stderr, "eth write %d\n", (int)s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       if (s->pcap) {
         pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
@@ -396,9 +408,6 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
       pep=s->ethpack->next;
       free(s->ethpack);
       s->ethpack=pep;
-      if (s->pcap) {
-        pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
-      }
     }
   }
   return RC_OK;

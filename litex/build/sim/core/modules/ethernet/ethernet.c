@@ -24,7 +24,7 @@
 #endif
 
 #ifdef __linux__
-// #define USE_READ_TIMEOUT
+#define USE_READ_TIMEOUT
 #endif
 
 #ifdef USE_GW
@@ -185,7 +185,8 @@ void event_handler(int fd, short event, void *arg)
       memset(buf, 0, sizeof(buf));
       len = tapcfg_read(s->tapcfg, buf, sizeof(buf));
       if (len == 0) {
-        fprintf(stderr, "eh len ZERO!\n");
+        fprintf(stderr, "eh len is ZERO!\n");
+        assert(!"eh len is ZERO!");
       }
       if (len > 0) {
         fprintf(stderr, "eth read BLIND %d seq: %d\n", len, num_seq_reads);
@@ -424,16 +425,16 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
       if (s->pcap) {
         pcap_dispatch(s->pcap, 0, pcap_dump, (u_char *)s->pcap_dumper);
       }
-      s->datalen=0;
+      s->datalen = 0;
     }
   }
 
-  *s->rx_valid=0;
+  *s->rx_valid = 0;
   if(s->inlen) {
-    *s->rx_valid=1;
+    *s->rx_valid = 1;
     *s->rx = s->inbuf[s->insent++];
     if(s->insent == s->inlen) {
-      s->insent =0;
+      s->insent = 0;
       s->inlen = 0;
     }
   } else {
@@ -441,9 +442,9 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     if(s->ethpack) {
       memcpy(s->inbuf, s->ethpack->data, s->ethpack->len);
       s->inlen = s->ethpack->len;
-      pep=s->ethpack->next;
+      pep = s->ethpack->next;
       free(s->ethpack);
-      s->ethpack=pep;
+      s->ethpack = pep;
       fprintf(stderr, "eth POP\n");
     }
     dump_packet_chain(s, "tck end");

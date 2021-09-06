@@ -10,6 +10,7 @@
 import os
 import argparse
 import socket
+import time
 
 from litex.tools.remote.etherbone import EtherbonePacket, EtherboneRecord
 from litex.tools.remote.etherbone import EtherboneReads, EtherboneWrites
@@ -61,12 +62,16 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         self.send_packet(self.socket, packet)
 
         # Receive response
+        packet_buf = self.receive_packet(self.socket)
+        if isinstance(packet_buf, int):
+            raise TimeoutError
         packet = EtherbonePacket(self.receive_packet(self.socket))
         packet.decode()
         datas = packet.records.pop().writes.get_datas()
         if self.debug:
             for i, data in enumerate(datas):
                 print("read 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
+        # time.sleep(0.01)
         return datas[0] if length is None else datas
 
     def write(self, addr, datas):
@@ -83,6 +88,7 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         if self.debug:
             for i, data in enumerate(datas):
                 print("write 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
+        # time.sleep(0.01)
 
 # Utils --------------------------------------------------------------------------------------------
 

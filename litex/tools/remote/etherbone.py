@@ -301,6 +301,8 @@ class EtherbonePacket(Packet):
             raise ValueError
 
         ba = self.bytes
+        if isinstance(ba, int):
+            print(f'ba: 0x{ba:02x} {ba}')
 
         # Decode header
         header = list(ba[:etherbone_packet_header.length])

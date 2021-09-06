@@ -24,7 +24,7 @@
 #endif
 
 #ifdef __linux__
-#define USE_READ_TIMEOUT
+// #define USE_READ_TIMEOUT
 #endif
 
 #ifdef USE_GW
@@ -68,6 +68,20 @@ struct session_s {
 };
 
 static struct event_base *base=NULL;
+
+static void dump_packet_chain(const struct session_s *s, const char *note) {
+  if (!s->ethpack) {
+    // fprintf(stderr, "dmp %s: s->ethpack is NULL!\n", note);
+    return;
+  }
+  fprintf(stderr, "dmp %s: s->ethpack is GOLDEN!\n", note);
+  struct eth_packet_s *tep = NULL;
+  int i = 0;
+  for (tep = s->ethpack; tep; tep = tep->next) {
+    fprintf(stderr, "dmp %s: tep %d: len: %zu\n", note, i, tep->len);
+    ++i;
+  }
+}
 
 int litex_sim_module_get_args(char *args, char *arg, char **val)
 {
@@ -141,8 +155,8 @@ void event_handler(int fd, short event, void *arg)
   struct session_s *s = (struct session_s*)arg;
   struct eth_packet_s *ep;
   struct eth_packet_s *tep;
-  char buf[2000];
-  int len = -1;
+
+  dump_packet_chain(s, "eh start");
 
 #ifndef USE_READ_TIMEOUT
   if (event & EV_READ) {
@@ -162,11 +176,18 @@ void event_handler(int fd, short event, void *arg)
     }
   }
 #else
+  char buf[2000];
+  int len = -1;
+
   if (event & EV_TIMEOUT) {
     int num_seq_reads = 0;
     do {
+      memset(buf, 0, sizeof(buf));
       len = tapcfg_read(s->tapcfg, buf, sizeof(buf));
-      if (len >= 0) {
+      if (len == 0) {
+        fprintf(stderr, "eh len ZERO!\n");
+      }
+      if (len > 0) {
         fprintf(stderr, "eth read BLIND %d seq: %d\n", len, num_seq_reads);
         ep = malloc(sizeof(struct eth_packet_s));
         memset(ep, 0, sizeof(struct eth_packet_s));
@@ -175,10 +196,15 @@ void event_handler(int fd, short event, void *arg)
         if(ep->len < 60)
           ep->len = 60;
 
-        if(!s->ethpack)
+        if(!s->ethpack) {
+          fprintf(stderr, "eh null ethpack\n");
           s->ethpack = ep;
+        }
         else {
-          for(tep=s->ethpack; tep->next; tep=tep->next);
+          for(tep=s->ethpack; tep->next; tep=tep->next) {
+            fprintf(stderr, "eh iter\n");
+          }
+          fprintf(stderr, "eth PUSH\n");
           tep->next = ep;
         }
       }
@@ -186,6 +212,8 @@ void event_handler(int fd, short event, void *arg)
     } while (len > 0);
   }
 #endif
+
+  dump_packet_chain(s, "eh end");
 }
 
 
@@ -194,13 +222,15 @@ static int ethernet_new(void **sess, char *args)
   int ret = RC_OK;
   char *c_tap = NULL;
   char *c_tap_ip = NULL;
+#if USE_GW
   char *ifname = NULL;
+#endif
   struct session_s *s = NULL;
 #ifndef USE_READ_TIMEOUT
   struct timeval tv_tap_read_timeout = {10, 0};
 #else
   // Mac TUN/TAP driver doesn't support kqueue - must use short timeouts to get read events
-  struct timeval tv_tap_read_timeout = {0, 10000}; // 1000 seems to break SIGINT
+  struct timeval tv_tap_read_timeout = {0, 100}; // 1000 seems to break SIGINT
 #endif
 
   if(!sess) {
@@ -226,7 +256,10 @@ static int ethernet_new(void **sess, char *args)
       goto out;
   }
 
-  struct in_addr ia, ia_gw;
+  struct in_addr ia;
+#if USE_GW
+  struct in_addr ia_gw;
+#endif
   int inet_aton_res = inet_aton(c_tap_ip, &ia);
   assert(inet_aton_res == 1);
   memcpy(ipadr, &ia.s_addr, sizeof(ipadr));
@@ -251,7 +284,9 @@ static int ethernet_new(void **sess, char *args)
   assert(!close(sysctl_fd));
 #endif
 
+#if USE_GW
   ifname = tapcfg_get_ifname(s->tapcfg);
+#endif
   s->fd = tapcfg_get_fd(s->tapcfg);
 #ifdef USE_READ_TIMEOUT
   // don't block during speculative, timer callback reads
@@ -402,13 +437,16 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
       s->inlen = 0;
     }
   } else {
+    dump_packet_chain(s, "tck start");
     if(s->ethpack) {
       memcpy(s->inbuf, s->ethpack->data, s->ethpack->len);
       s->inlen = s->ethpack->len;
       pep=s->ethpack->next;
       free(s->ethpack);
       s->ethpack=pep;
+      fprintf(stderr, "eth POP\n");
     }
+    dump_packet_chain(s, "tck end");
   }
   return RC_OK;
 }

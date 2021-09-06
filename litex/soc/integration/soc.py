@@ -1416,7 +1416,8 @@ class LiteXSoC(SoC):
             nrxslots   = nrxslots,
             ntxslots   = ntxslots,
             timestamp  = None if not with_timestamp else self.timer0.uptime_cycles,
-            with_preamble_crc = not software_debug)
+            with_preamble_crc = not software_debug,
+            with_sim_hack = isinstance(phy, LiteEthPHYModel))
         # Use PHY's eth_tx/eth_rx clock domains.
         ethmac = ClockDomainsRenamer({
             "eth_tx": phy_cd + "_tx",
@@ -1464,7 +1465,8 @@ class LiteXSoC(SoC):
             phy         = phy,
             mac_address = mac_address,
             ip_address  = ip_address,
-            clk_freq    = self.clk_freq)
+            clk_freq    = self.clk_freq,
+            with_sim_hack = isinstance(phy, LiteEthPHYModel))
         # Use PHY's eth_tx/eth_rx clock domains.
         ethcore = ClockDomainsRenamer({
             "eth_tx": phy_cd + "_tx",

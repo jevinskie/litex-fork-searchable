@@ -155,7 +155,8 @@ class SimSoC(SoCCore):
             self.submodules.ethmac = LiteEthMAC(phy=self.ethphy, dw=8,
                 interface  = "hybrid",
                 endianness = self.cpu.endianness,
-                hw_mac     = etherbone_mac_address)
+                hw_mac     = etherbone_mac_address,
+                with_sim_hack = True)
 
             # SoftCPU
             if self.cpu_type is not None:
@@ -179,7 +180,8 @@ class SimSoC(SoCCore):
             # Ethernet MAC
             ethmac = LiteEthMAC(phy=self.ethphy, dw=32,
                 interface  = "wishbone",
-                endianness = self.cpu.endianness)
+                endianness = self.cpu.endianness,
+                with_sim_hack = True)
             if with_etherbone:
                 ethmac = ClockDomainsRenamer({"eth_tx": "ethphy_eth_tx", "eth_rx":  "ethphy_eth_rx"})(ethmac)
             self.submodules.ethmac = ethmac

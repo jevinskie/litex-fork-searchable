@@ -194,6 +194,15 @@ class RS232PHYModel(Module):
             pads.sink_ready.eq(self.source.ready)
         ]
 
+        if hasattr(pads, "source_first"):
+            self.comb += pads.source_first.eq(self.sink.first)
+        if hasattr(pads, "source_last"):
+            self.comb += pads.source_last.eq(self.sink.last)
+        if hasattr(pads, "sink_first"):
+            self.comb += self.source.first.eq(pads.sink_first)
+        if hasattr(pads, "sink_last"):
+            self.comb += self.source.last.eq(pads.sink_last)
+
 # UART ---------------------------------------------------------------------------------------------
 
 def _get_uart_fifo(depth, sink_cd="sys", source_cd="sys"):

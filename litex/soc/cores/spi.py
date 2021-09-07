@@ -291,22 +291,27 @@ class SPISlave(Module):
 # Simulation SPI Master ----------------------------------------------------------------------------
 
 class SPIMasterStreamer(Module):
-    def __init__(self, source, pads, sys_clk_freq: int, spi_clk_freq: int):
+    def __init__(self, input, pads, sys_clk_freq: int, spi_clk_freq: int):
         self.submodules.master = master = SPIMaster(pads, 8, sys_clk_freq, spi_clk_freq, with_csr=False)
-        self.sink = stream.Endpoint([("data", 8)]) # module input
-        self.source = source
+        self.sink = input # module input
+        self.source = stream.Endpoint([("data", 8)]) # Module output
+
+        self.idle_flag = Signal()
+        self.xfer_flag = Signal()
 
         # Control FSM ------------------------------------------------------------------------------
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act("IDLE",
-            self.sink.ready.eq(1),
+            self.idle_flag.eq(1),
+            # self.sink.ready.eq(1),
             If(self.sink.valid,
                 self.master.start.eq(1),
                 NextState("XFER")
             )
         )
         fsm.act("XFER",
-            If(self.master.done,
+            self.xfer_flag.eq(1),
+            If(self.master.irq,
                 NextState("IDLE")
             ),
         )
@@ -320,12 +325,12 @@ class SPIMasterStreamer(Module):
 class SimSPIMaster(Module):
     def __init__(self, phy: RS232PHYModel, pads, sys_clk_freq: int, spi_clk_freq: int):
         self.phy = phy
-        self.submodules.spi_streamer = SPIMasterStreamer(phy.source, pads, sys_clk_freq, spi_clk_freq)
+        self.submodules.spi_streamer = SPIMasterStreamer(phy.sink, pads, sys_clk_freq, spi_clk_freq)
 
-        self.submodules.sink_fifo = stream.SyncFIFO(layout=self.spi_streamer.source.payload.layout, depth=4)
+        # self.submodules.sink_fifo = stream.SyncFIFO(layout=self.spi_streamer.source.payload.layout, depth=4)
 
         self.submodules.pipeline = pipeline = stream.Pipeline(
             self.phy,
             self.spi_streamer,
-            self.sink_fifo,
+            # self.sink_fifo,
         )

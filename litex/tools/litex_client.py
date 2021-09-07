@@ -71,6 +71,7 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         if self.debug:
             for i, data in enumerate(datas):
                 print("read 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
+        time.sleep(0.01)
         return datas[0] if length is None else datas
 
     def write(self, addr, datas):
@@ -87,6 +88,7 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         if self.debug:
             for i, data in enumerate(datas):
                 print("write 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
+        time.sleep(0.01)
 
 # Utils --------------------------------------------------------------------------------------------
 

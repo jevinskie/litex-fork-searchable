@@ -214,7 +214,7 @@ static int serial2tcp_add_pads(void *sess, struct pad_list_s *plist)
     goto out;
   }
   pads = plist->pads;
-  if(!strcmp(plist->name, "serial")) {
+  if(!strcmp(plist->name, "serial") || !strcmp(plist->name, "serial2spi")) {
     litex_sim_module_pads_get(pads, "sink_data", (void**)&s->rx);
     litex_sim_module_pads_get(pads, "sink_valid", (void**)&s->rx_valid);
     litex_sim_module_pads_get(pads, "sink_ready", (void**)&s->rx_ready);

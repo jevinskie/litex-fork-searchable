@@ -131,7 +131,7 @@ class XilinxVivadoToolchain:
         self.clocks      = dict()
         self.false_paths = set()
 
-    def _build_tcl(self, platform, build_name, synth_mode, enable_xpm):
+    def _build_tcl(self, platform, build_name, synth_mode, enable_xpm, enable_retiming=False):
         assert synth_mode in ["vivado", "yosys"]
         tcl = []
 
@@ -202,6 +202,8 @@ class XilinxVivadoToolchain:
                                                                              build_name, platform.device)
             if platform.verilog_include_paths:
                 synth_cmd += " -include_dirs {{{}}}".format(" ".join(platform.verilog_include_paths))
+            if enable_retiming:
+                synth_cmd += " -retiming"
             tcl.append(synth_cmd)
         elif synth_mode == "yosys":
             tcl.append("\n# Read Yosys EDIF\n")
@@ -361,6 +363,7 @@ class XilinxVivadoToolchain:
         run        = True,
         synth_mode = "vivado",
         enable_xpm = False,
+        enable_retiming = False,
         **kwargs):
 
         # Create build directory
@@ -389,7 +392,8 @@ class XilinxVivadoToolchain:
             platform   = platform,
             build_name = build_name,
             synth_mode = synth_mode,
-            enable_xpm = enable_xpm
+            enable_xpm = enable_xpm,
+            enable_retiming = enable_retiming,
         )
 
         # Generate design constraints (.xdc)

@@ -13,16 +13,20 @@
 
 #include "spiflash.h"
 
-#if defined(CSR_SPIFLASH_PHY_BASE) && defined(CSR_SPIFLASH_CORE_BASE)
-
 //#define SPIFLASH_DEBUG
-//#define SPIFLASH_MODULE_DUMMY_BITS 8
+
+#if defined(CSR_SPIFLASH_CORE_BASE)
 
 int spiflash_freq_init(void)
 {
-	unsigned int lowest_div = spiflash_phy_clk_divisor_read();
-	unsigned int crc = crc32((unsigned char *)SPIFLASH_BASE, SPI_FLASH_BLOCK_SIZE);
-	unsigned int crc_test = crc;
+
+#ifdef CSR_SPIFLASH_PHY_CLK_DIVISOR_ADDR
+
+	unsigned int lowest_div, crc, crc_test;
+
+	lowest_div = spiflash_phy_clk_divisor_read();
+	crc        = crc32((unsigned char *)SPIFLASH_BASE, SPI_FLASH_BLOCK_SIZE);
+	crc_test   = crc;
 
 #if SPIFLASH_DEBUG
 	printf("Testing against CRC32: %08x\n\r", crc);
@@ -42,18 +46,24 @@ int spiflash_freq_init(void)
 #endif
 	}
 	lowest_div++;
-	printf("SPI Flash clk configured to %d MHz\n", (spiflash_core_sys_clk_freq_read()/(2*(1 + lowest_div)))/1000000);
+	printf("SPI Flash clk configured to %d MHz\n", (SPIFLASH_PHY_FREQUENCY/(2*(1 + lowest_div)))/1000000);
 
 	spiflash_phy_clk_divisor_write(lowest_div);
+
+#else
+
+	printf("SPI Flash clk configured to %ld MHz\n", (unsigned long)(SPIFLASH_PHY_FREQUENCY/1e6));
+
+#endif
 
 	return 0;
 }
 
 void spiflash_dummy_bits_setup(unsigned int dummy_bits)
 {
-	spiflash_phy_dummy_bits_write((uint32_t)dummy_bits);
+	spiflash_core_mmap_dummy_bits_write((uint32_t)dummy_bits);
 #if SPIFLASH_DEBUG
-	printf("Dummy bits set to: %d\n\r", spi_dummy_bits_read());
+	printf("Dummy bits set to: %d\n\r", spiflash_core_mmap_dummy_bits_read());
 #endif
 }
 
@@ -111,8 +121,6 @@ void spiflash_init(void)
 #ifndef SPIFLASH_SKIP_FREQ_INIT
 	/* Clk frequency auto-calibration. */
 	spiflash_freq_init();
-#else
-	printf("Warning: SPI Flash frequency auto-calibration skipped, using the default divisor of %d\n", spiflash_phy_clk_divisor_read());
 #endif
 
 	memspeed((unsigned int *) SPIFLASH_BASE, SPIFLASH_SIZE/16, 1, 0);

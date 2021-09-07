@@ -98,9 +98,9 @@ class Platform(SimPlatform):
 # Simulation SoC -----------------------------------------------------------------------------------
 
 class SimSoC(SoCCore):
-    mem_map = {
+    mem_map = dict({
         "spiflash" : 0x80000000,
-    }
+    }, **SoCCore.mem_map)
     def __init__(self,
         with_sdram            = False,
         with_ethernet         = False,
@@ -113,6 +113,7 @@ class SimSoC(SoCCore):
         sdram_data_width      = 32,
         sdram_spd_data        = None,
         sdram_verbosity       = 0,
+        with_sdram_bist       = False,
         with_i2c              = False,
         with_sdcard           = False,
         with_spi_flash        = False,
@@ -155,7 +156,7 @@ class SimSoC(SoCCore):
                 l2_cache_size           = kwargs.get("l2_size", 8192),
                 l2_cache_min_data_width = kwargs.get("min_l2_data_width", 128),
                 l2_cache_reverse        = False,
-                with_bist               = True,
+                with_bist               = with_sdram_bist,
             )
             if sdram_init != []:
                 # Skip SDRAM test to avoid corrupting pre-initialized contents.
@@ -322,6 +323,7 @@ def sim_args(parser):
     parser.add_argument("--sdram-init",           default=None,            help="SDRAM init file")
     parser.add_argument("--sdram-from-spd-dump",  default=None,            help="Generate SDRAM module based on data from SPD EEPROM dump")
     parser.add_argument("--sdram-verbosity",      default=0,               help="Set SDRAM checker verbosity")
+    parser.add_argument("--with-sdram-bist",      action="store_true",     help="Enable SDRAM BIST support")
     parser.add_argument("--with-ethernet",        action="store_true",     help="Enable Ethernet support")
     parser.add_argument("--with-etherbone",       action="store_true",     help="Enable Etherbone support")
     parser.add_argument("--local-ip",             default="192.168.42.50",  help="Local IP address of SoC (default=192.168.42.50)")
@@ -393,6 +395,7 @@ def main():
     # SoC ------------------------------------------------------------------------------------------
     soc = SimSoC(
         with_sdram     = args.with_sdram,
+        with_sdram_bist= args.with_sdram_bist,
         with_ethernet  = args.with_ethernet,
         with_etherbone = args.with_etherbone,
         with_analyzer  = args.with_analyzer,

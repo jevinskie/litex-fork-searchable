@@ -10,6 +10,7 @@ from migen import *
 from migen.genlib.cdc import MultiReg
 
 from litex.soc.interconnect.csr import *
+from litex.soc.cores.uart import RS232PHYModel
 
 # SPI Master ---------------------------------------------------------------------------------------
 
@@ -283,4 +284,24 @@ class SPISlave(Module):
             If(cs & clk_rise,
                 self.mosi.eq(Cat(mosi, self.mosi[:-1]))
             )
+        ]
+
+
+# Simulation SPI Master ----------------------------------------------------------------------------
+
+class SimSPIMaster(Module):
+    def __init__(self, phy: RS232PHYModel, pads, sys_clk_freq: int, spi_clk_freq: int):
+        self.phy = phy
+        self.submodules.master = master = SPIMaster(pads, 8, sys_clk_freq, spi_clk_freq, with_csr=False)
+
+        self.comb += [
+            master.length.eq(8),
+            master.mosi.eq(phy.source.payload.data),
+        ]
+
+        self.last_valid = last_valid = Signal()
+        self.sync += last_valid.eq(phy.source.valid)
+        self.comb += [
+            master.start.eq(~last_valid & phy.source.valid),
+            phy.source.ready.eq(master.done),
         ]

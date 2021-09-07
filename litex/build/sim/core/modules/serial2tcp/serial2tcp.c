@@ -3,6 +3,7 @@
 #include <string.h>
 #include "error.h"
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <event2/listener.h>
 #include <event2/util.h>
 #include <event2/event.h>
@@ -27,7 +28,7 @@ struct session_s {
 
 struct event_base *base;
 
-int litex_sim_module_get_args( char *args, char *arg, char **val)
+int litex_sim_module_get_args( char *args, char *arg, char **val, bool optional)
 {
   int ret = RC_OK;
   json_object *jsobj = NULL;
@@ -37,12 +38,6 @@ int litex_sim_module_get_args( char *args, char *arg, char **val)
 
   if(!arg) {
     fprintf(stderr, "litex_sim_module_get_args(): `arg` (requested .json key) is NULL!\n");
-    ret=RC_JSERROR;
-    goto out;
-  }
-
-  if(!args) {
-    fprintf(stderr, "missing key in .json file: %s\n", arg);
     ret=RC_JSERROR;
     goto out;
   }
@@ -61,8 +56,12 @@ int litex_sim_module_get_args( char *args, char *arg, char **val)
   obj=NULL;
   r = json_object_object_get_ex(jsobj, arg, &obj);
   if(!r) {
-    fprintf(stderr, "Could not find object: \"%s\" (%s)\n", arg, args);
-    ret=RC_JSERROR;
+    if (!optional) {
+      fprintf(stderr, "Could not find object: \"%s\" (%s)\n", arg, args);
+      ret=RC_JSERROR;
+    } else {
+      ret=RC_JSMISSINGKEY;
+    }
     goto out;
   }
   value=strdup(json_object_get_string(obj));
@@ -159,6 +158,7 @@ static int serial2tcp_new(void **sess, char *args)
   int ret = RC_OK;
   struct session_s *s = NULL;
   char *cport = NULL;
+  char *cbind_ip = NULL;
   int port;
   struct evconnlistener *listener;
   struct sockaddr_in sin;
@@ -167,11 +167,22 @@ static int serial2tcp_new(void **sess, char *args)
     ret = RC_INVARG;
     goto out;
   }
-  ret = litex_sim_module_get_args(args, "port", &cport);
+  ret = litex_sim_module_get_args(args, "port", &cport, false);
   if(RC_OK != ret)
     goto out;
 
-  printf("Found port %s\n", cport);
+  ret = litex_sim_module_get_args(args, "bind_ip", &cbind_ip, true);
+  if(RC_OK != ret) {
+    if (RC_JSMISSINGKEY == ret) {
+      cbind_ip = "0.0.0.0";
+    } else {
+      goto out;
+    }
+  } else {
+    fprintf(stderr, "Found bind IP %s\n", cbind_ip);
+  }
+
+  fprintf(stderr, "Found port %s\n", cport);
   sscanf(cport, "%d", &port);
   free(cport);
   if(!port) {
@@ -191,6 +202,14 @@ static int serial2tcp_new(void **sess, char *args)
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = htonl(0);
   sin.sin_port = htons(port);
+  ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
+  if(!ret) {
+    fprintf(stderr, "Invalid bind IP ('%s') selected!\n", cbind_ip);
+    ret = RC_ERROR;
+    goto out;
+  } else {
+    ret = RC_OK;
+  }
   listener = evconnlistener_new_bind(base, accept_conn_cb, s,  LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1, (struct sockaddr*)&sin, sizeof(sin));
   if (!listener) {
     ret=RC_ERROR;

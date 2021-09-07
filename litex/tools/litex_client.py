@@ -20,7 +20,7 @@ from litex.tools.remote.csr_builder import CSRBuilder
 # Remote Client ------------------------------------------------------------------------------------
 
 class RemoteClient(EtherboneIPC, CSRBuilder):
-    def __init__(self, host="localhost", port=1234, base_address=0, csr_csv=None, csr_data_width=None, debug=False):
+    def __init__(self, host="localhost", port=1234, base_address=0, csr_csv=None, csr_data_width=None, debug=False, with_sim_hack=False):
         # If csr_csv set to None and local csr.csv file exists, use it.
         if csr_csv is None and os.path.exists("csr.csv"):
             csr_csv = "csr.csv"
@@ -34,6 +34,7 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         self.port         = port
         self.base_address = base_address
         self.debug        = debug
+        self.sim_hack     = with_sim_hack
 
     def open(self):
         if hasattr(self, "socket"):
@@ -71,7 +72,8 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         if self.debug:
             for i, data in enumerate(datas):
                 print("read 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
-        time.sleep(0.01)
+        if self.sim_hack:
+            time.sleep(0.01)
         return datas[0] if length is None else datas
 
     def write(self, addr, datas):
@@ -88,7 +90,8 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         if self.debug:
             for i, data in enumerate(datas):
                 print("write 0x{:08x} @ 0x{:08x}".format(data, self.base_address + addr + 4*i))
-        time.sleep(0.01)
+        if self.sim_hack:
+            time.sleep(0.01)
 
 # Utils --------------------------------------------------------------------------------------------
 

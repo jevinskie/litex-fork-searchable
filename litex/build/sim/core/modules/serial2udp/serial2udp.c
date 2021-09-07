@@ -1,15 +1,22 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <event2/listener.h>
 #include <event2/util.h>
 #include <event2/event.h>
 
 #include <json-c/json.h>
 #include "modules.h"
+
+struct udp_packet_s {
+  char data[2000];
+  size_t len;
+  struct sockaddr_in source_sin;
+  struct udp_packet_s *next;
+};
 
 struct session_s {
   char *tx;
@@ -23,6 +30,7 @@ struct session_s {
   char *rx_first;
   char *rx_last;
   char *sys_clk;
+  int sock;
   struct event *ev;
   char databuf[4000];
   int data_start;
@@ -115,6 +123,8 @@ void read_handler(int fd, short event, void *arg)
   int i, ret;
 
   read_len = read(fd, buffer, sizeof(buffer));
+  eprintf("got read len %zd\n", read_len);
+
   if (read_len == 0) {
     // Received EOF, remote has closed the connection
     eprintf("read_len 0, EOF?\n");
@@ -135,27 +145,9 @@ void read_handler(int fd, short event, void *arg)
 
 static void event_handler(int fd, short event, void *arg)
 {
+  eprintf("got event\n");
   if (event & EV_READ)
     read_handler(fd, event, arg);
-}
-
-static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen,  void *ctx)
-{
-  struct session_s *s = (struct session_s*)ctx;
-  struct timeval tv = {1, 0};
-
-  s->fd = fd;
-  s->ev = event_new(base, fd, EV_READ | EV_PERSIST , event_handler, s);
-  event_add(s->ev, &tv);
-}
-
-static void
-accept_error_cb(struct evconnlistener *listener, void *ctx)
-{
-  struct event_base *base = evconnlistener_get_base(listener);
-  eprintf("ERROR\n");
-
-  event_base_loopexit(base, NULL);
 }
 
 static int serial2udp_new(void **sess, char *args)
@@ -165,8 +157,8 @@ static int serial2udp_new(void **sess, char *args)
   char *cport = NULL;
   char *cbind_ip = NULL;
   int port;
-  struct evconnlistener *listener;
   struct sockaddr_in sin;
+  struct timeval tv_sock_read_timeout = {10, 0};
 
   if(!sess) {
     ret = RC_INVARG;
@@ -203,11 +195,18 @@ static int serial2udp_new(void **sess, char *args)
   }
   memset(s, 0, sizeof(struct session_s));
 
+  s->sock = socket(AF_INET, SOCK_DGRAM, 0);
+  assert(s->sock >= 0);
+
+  // int optval = 1;
+  // assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
+  // assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
+
   memset(&sin, 0, sizeof(sin));
+  ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = htonl(0);
   sin.sin_port = htons(port);
-  ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
   if(!ret) {
     fprintf(stderr, "Invalid bind IP ('%s') selected!\n", cbind_ip);
     ret = RC_ERROR;
@@ -215,13 +214,16 @@ static int serial2udp_new(void **sess, char *args)
   } else {
     ret = RC_OK;
   }
-  listener = evconnlistener_new_bind(base, accept_conn_cb, s,  LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1, (struct sockaddr*)&sin, sizeof(sin));
-  if (!listener) {
-    ret=RC_ERROR;
-    eprintf("Can't bind port %d\n!\n", port);
+
+  if (bind(s->sock, (const struct sockaddr *) &sin, sizeof(sin))) {
+    perror("serial2udp: bind()");
+    fprintf(stderr, "serial2udp: IP: %s port: %d\n", cbind_ip, port);
+    ret = RC_ERROR;
     goto out;
   }
-  evconnlistener_set_error_cb(listener, accept_error_cb);
+
+  s->ev = event_new(base, s->sock, EV_READ | EV_PERSIST, event_handler, s);
+  event_add(s->ev, &tv_sock_read_timeout);
 
 out:
   *sess=(void*)s;

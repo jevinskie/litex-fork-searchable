@@ -298,21 +298,31 @@ class SPIMasterStreamer(Module):
 
         self.idle_flag = Signal()
         self.xfer_flag = Signal()
+        self.cs        = Signal()
+        self.last_byte = Signal()
+
+        self.comb += self.cs.eq(1)
 
         # Control FSM ------------------------------------------------------------------------------
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act("IDLE",
             self.idle_flag.eq(1),
             self.sink.ready.eq(1),
+            If(self.sink.first,
+                NextValue(self.cs, 0),
+            ),
+            If(self.sink.last,
+               NextValue(self.last_byte, 1),
+            ),
             If(self.sink.valid,
                 self.master.start.eq(1),
                 NextState("XFER")
-            )
+            ),
         )
         fsm.act("XFER",
             self.xfer_flag.eq(1),
             If(self.master.irq,
-                NextState("IDLE")
+                NextState("IDLE"),
             ),
         )
 

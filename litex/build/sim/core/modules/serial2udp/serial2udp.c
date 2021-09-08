@@ -127,15 +127,13 @@ void read_handler(int fd, short event, void *arg)
   up = malloc(sizeof(struct udp_packet_s));
   memset(up, 0, sizeof(struct udp_packet_s));
   up->len = recvfrom(s->sock, &up->data, sizeof(up->data), 0, (struct sockaddr *)&s->client_addr, &client_addr_sz);
-  eprintf("read %zd\n", up->len);
+  fprintf(stderr, "serial2udp: read %zd\n", up->len);
   if (up->len < 0) {
     perror("serial2udp: recvfrom()");
     event_base_loopexit(base, NULL);
     return;
   }
   assert(up->len != 0);
-  if(up->len < 60)
-    up->len = 60;
 
   if(!s->udppack)
     s->udppack = up;
@@ -147,7 +145,6 @@ void read_handler(int fd, short event, void *arg)
 
 static void event_handler(int fd, short event, void *arg)
 {
-  eprintf("got event\n");
   if (event & EV_READ)
     read_handler(fd, event, arg);
 }
@@ -282,9 +279,9 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++] = c;
   } else {
     if(s->datalen) {
-      eprintf("udp write %d\n", s->datalen);
+      fprintf(stderr, "udp write %d\n", s->datalen);
       sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
-      eprintf("write res %zd\n", sent_sz);
+      fprintf(stderr, "write res %zd\n", sent_sz);
       if (sent_sz < 0) {
         perror("serial2udp: sendto()");
         event_base_loopexit(base, NULL);
@@ -295,18 +292,26 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
   }
 
   *s->rx_valid = 0;
+  *s->rx_first = 0;
+  *s->rx_last = 0;
   if(s->inlen) {
+    fprintf(stderr, "serial2udp: inlen: %d insent: %d\n", s->inlen, s->insent);
     *s->rx_valid = 1;
     *s->rx = s->inbuf[s->insent];
+    if (s->insent == 0) {
+      *s->rx_first = 1;
+    }
     if (*s->rx_ready == 1) {
       s->insent++;
     }
     if(s->insent == s->inlen) {
       s->insent = 0;
       s->inlen = 0;
+      *s->rx_last = 1;
     }
   } else {
     if(s->udppack) {
+      fprintf(stderr, "serial2udp: copying udpack to inbuf\n");
       memcpy(s->inbuf, s->udppack->data, s->udppack->len);
       s->inlen = s->udppack->len;
       pup = s->udppack->next;

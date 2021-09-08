@@ -356,8 +356,5 @@ class SimSPIMaster(Module):
         self.phy = phy
         self.submodules.spi_streamer = SPIMasterStreamer(pads, sys_clk_freq, spi_clk_freq)
 
-        self.submodules.pipeline = pipeline = stream.Pipeline(
-            self.phy,
-            self.spi_streamer,
-            # self.sink_fifo,
-        )
+        self.comb += self.spi_streamer.source.connect(self.phy.sink)
+        self.comb += self.phy.source.connect(self.spi_streamer.sink)

@@ -13,8 +13,7 @@
 
 struct udp_packet_s {
   char data[2000];
-  size_t len;
-  struct sockaddr_in source_sin;
+  ssize_t len;
   struct udp_packet_s *next;
 };
 
@@ -31,11 +30,14 @@ struct session_s {
   char *rx_last;
   char *sys_clk;
   int sock;
+  struct sockaddr_in client_addr;
+  struct udp_packet_s *udppack;
   struct event *ev;
-  char databuf[4000];
-  int data_start;
+  char databuf[2000];
   int datalen;
-  int fd;
+  char inbuf[2000];
+  int inlen;
+  int insent;
 };
 
 struct event_base *base;
@@ -118,28 +120,28 @@ static int serial2udp_start(void *b)
 void read_handler(int fd, short event, void *arg)
 {
   struct session_s *s = (struct session_s*)arg;
-  char buffer[2000];
-  ssize_t read_len;
-  int i, ret;
+  struct udp_packet_s *up;
+  struct udp_packet_s *tup;
+  socklen_t client_addr_sz = sizeof(s->client_addr);
 
-  read_len = read(fd, buffer, sizeof(buffer));
-  eprintf("got read len %zd\n", read_len);
-
-  if (read_len == 0) {
-    // Received EOF, remote has closed the connection
-    eprintf("read_len 0, EOF?\n");
-    ret = event_del(s->ev);
-    if (ret != 0) {
-      eprintf("read_handler(): Error removing event %d!\n", event);
-      return;
-    }
-    event_free(s->ev);
-    s->ev = NULL;
+  up = malloc(sizeof(struct udp_packet_s));
+  memset(up, 0, sizeof(struct udp_packet_s));
+  up->len = recvfrom(s->sock, &up->data, sizeof(up->data), 0, (struct sockaddr *)&s->client_addr, &client_addr_sz);
+  eprintf("read %zd\n", up->len);
+  if (up->len < 0) {
+    perror("serial2udp: recvfrom()");
+    event_base_loopexit(base, NULL);
+    return;
   }
-  for(i = 0; i < read_len; i++)
-  {
-    s->databuf[(s->data_start +  s->datalen ) % 2048] = buffer[i];
-    s->datalen++;
+  assert(up->len != 0);
+  if(up->len < 60)
+    up->len = 60;
+
+  if(!s->udppack)
+    s->udppack = up;
+  else {
+    for(tup=s->udppack; tup->next; tup=tup->next);
+    tup->next = up;
   }
 }
 
@@ -198,9 +200,9 @@ static int serial2udp_new(void **sess, char *args)
   s->sock = socket(AF_INET, SOCK_DGRAM, 0);
   assert(s->sock >= 0);
 
-  // int optval = 1;
-  // assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
-  // assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
+  int optval = 1;
+  assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
+  assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
 
   memset(&sin, 0, sizeof(sin));
   ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
@@ -265,34 +267,54 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
   static struct clk_edge_t edge;
   char c;
   int ret = RC_OK;
+  ssize_t sent_sz = -1;
+  struct udp_packet_s *pup;
 
   struct session_s *s = (struct session_s*)sess;
   if(!clk_pos_edge(&edge, *s->sys_clk)) {
     return RC_OK;
   }
 
+
   *s->tx_ready = 1;
-  if(s->fd && *s->tx_valid) {
+  if(*s->tx_valid == 1) {
     c = *s->tx;
-    if(-1 ==write(s->fd, &c, 1)) {
-      eprintf("Error writing on socket\n");
-      ret = RC_ERROR;
-      goto out;
+    s->databuf[s->datalen++] = c;
+  } else {
+    if(s->datalen) {
+      eprintf("udp write %d\n", s->datalen);
+      sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
+      eprintf("write res %zd\n", sent_sz);
+      if (sent_sz < 0) {
+        perror("serial2udp: sendto()");
+        event_base_loopexit(base, NULL);
+        return RC_ERROR;
+      }
+      s->datalen = 0;
     }
   }
 
-  *s->rx_valid=0;
-  if(s->datalen) {
-    c = s->databuf[s->data_start];
-    *s->rx = c;
-    *s->rx_valid=1;
-    if (*s->rx_ready) {
-      s->data_start = (s->data_start + 1) % 2048;
-      s->datalen--;
+  *s->rx_valid = 0;
+  if(s->inlen) {
+    *s->rx_valid = 1;
+    *s->rx = s->inbuf[s->insent];
+    if (*s->rx_ready == 1) {
+      s->insent++;
+    }
+    if(s->insent == s->inlen) {
+      s->insent = 0;
+      s->inlen = 0;
+    }
+  } else {
+    if(s->udppack) {
+      memcpy(s->inbuf, s->udppack->data, s->udppack->len);
+      s->inlen = s->udppack->len;
+      pup = s->udppack->next;
+      free(s->udppack);
+      s->udppack = pup;
     }
   }
 
-out:
   return ret;
 }
 

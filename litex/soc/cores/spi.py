@@ -296,10 +296,12 @@ class SPIMasterStreamer(Module):
         self.sink = stream.Endpoint([("data", 8)])  # module input
         self.source = stream.Endpoint([("data", 8)]) # Module output
 
-        self.idle_flag = Signal()
-        self.xfer_flag = Signal()
-        self.cs_sw        = Signal()
-        self.last_byte = Signal()
+        self.idle_flag             = Signal()
+        self.xfer_from_master_flag = Signal()
+        self.xfer_to_stream_flag   = Signal()
+        self.cs_sw                 = Signal()
+        self.first_byte            = Signal()
+        self.last_byte             = Signal()
 
         self.comb += self.master.cs.eq(self.cs_sw)
         self.comb += self.master.cs_mode.eq(1)
@@ -311,28 +313,41 @@ class SPIMasterStreamer(Module):
             self.sink.ready.eq(1),
             If(self.sink.first,
                 NextValue(self.cs_sw, 1),
+                NextValue(self.first_byte, 1),
             ),
             If(self.sink.last,
                NextValue(self.last_byte, 1),
             ),
             If(self.sink.valid,
                 self.master.start.eq(1),
-                NextState("XFER")
+                NextState("XFER_FROM_MASTER")
             ),
         )
-        fsm.act("XFER",
-            self.xfer_flag.eq(1),
+        fsm.act("XFER_FROM_MASTER",
+            self.xfer_from_master_flag.eq(1),
             If(self.master.irq,
+                NextState("XFER_TO_STREAM"),
+            ),
+        )
+        fsm.act("XFER_TO_STREAM",
+            self.xfer_to_stream_flag.eq(1),
+            self.source.valid.eq(1),
+            If(self.source.ready,
                 NextState("IDLE"),
+                If(self.first_byte,
+                    NextValue(self.first_byte, 0),
+                ),
                 If(self.last_byte,
                     NextValue(self.cs_sw, 0),
-                )
+                    NextValue(self.last_byte, 0),
+                ),
             ),
         )
 
         self.comb += [
             self.master.length.eq(8),
             self.master.mosi.eq(self.sink.payload.data),
+            self.source.payload.data.eq(self.master.miso),
         ]
 
 

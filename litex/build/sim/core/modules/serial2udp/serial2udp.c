@@ -274,21 +274,24 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
 
 
   *s->tx_ready = 1;
+  if (*s->tx_first == 1) {
+    s->datalen = 0;
+  }
   if(*s->tx_valid == 1) {
     c = *s->tx;
     s->databuf[s->datalen++] = c;
-  } else {
-    if(s->datalen) {
-      fprintf(stderr, "udp write %d\n", s->datalen);
-      sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
-      fprintf(stderr, "write res %zd\n", sent_sz);
-      if (sent_sz < 0) {
-        perror("serial2udp: sendto()");
-        event_base_loopexit(base, NULL);
-        return RC_ERROR;
-      }
-      s->datalen = 0;
+  }
+  if (*s->tx_last) {
+    assert(s->datalen);
+    fprintf(stderr, "udp write %d\n", s->datalen);
+    sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
+    fprintf(stderr, "write res %zd\n", sent_sz);
+    if (sent_sz < 0) {
+      perror("serial2udp: sendto()");
+      event_base_loopexit(base, NULL);
+      return RC_ERROR;
     }
+    s->datalen = 0;
   }
 
   *s->rx_valid = 0;

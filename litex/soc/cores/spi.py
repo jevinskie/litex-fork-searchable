@@ -303,8 +303,11 @@ class SPIMasterStreamer(Module):
         self.first_byte            = Signal()
         self.last_byte             = Signal()
 
-        self.comb += self.master.cs.eq(self.cs_sw)
-        self.comb += self.master.cs_mode.eq(1)
+        self.comb += [
+            self.master.cs.eq(self.cs_sw),
+            self.master.cs_mode.eq(1),
+            self.master.loopback.eq(1),
+        ]
 
         # Control FSM ------------------------------------------------------------------------------
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")

@@ -332,6 +332,8 @@ class SPIMasterStreamer(Module):
         fsm.act("XFER_TO_STREAM",
             self.xfer_to_stream_flag.eq(1),
             self.source.valid.eq(1),
+            self.source.first.eq(self.first_byte),
+            self.source.last.eq(self.last_byte),
             If(self.source.ready,
                 NextState("IDLE"),
                 If(self.first_byte,

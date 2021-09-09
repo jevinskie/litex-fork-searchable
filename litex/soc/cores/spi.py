@@ -306,7 +306,7 @@ class SPIMasterStreamer(Module):
         self.comb += [
             self.master.cs.eq(self.cs_sw),
             self.master.cs_mode.eq(1),
-            self.master.loopback.eq(1),
+            # self.master.loopback.eq(1),
         ]
 
         # Control FSM ------------------------------------------------------------------------------

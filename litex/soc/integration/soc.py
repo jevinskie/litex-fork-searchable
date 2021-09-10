@@ -1362,7 +1362,7 @@ class LiteXSoC(SoC):
         )
         if connect_main_bus_to_dram:
             # Request a LiteDRAM native port.
-            port = self.sdram.crossbar.get_port()
+            self.dram_port = port = self.sdram.crossbar.get_port()
             port.data_width = 2**int(log2(port.data_width)) # Round to nearest power of 2.
 
             # Create Wishbone Slave.

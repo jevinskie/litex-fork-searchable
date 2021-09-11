@@ -60,3 +60,14 @@ class AlteraPlatform(GenericPlatform):
             ("altera_reserved_tdi", 0, Pins("altera_reserved_tdi")),
             ("altera_reserved_tdo", 0, Pins("altera_reserved_tdo")),
         ])
+
+    def get_reserved_jtag_pads(self) -> Record:
+        reserved_jtag_pads = Record([
+                ('altera_reserved_tms', self.request("altera_reserved_tms")),
+                ('altera_reserved_tck', self.request("altera_reserved_tck")),
+                ('altera_reserved_tdi', self.request("altera_reserved_tdi")),
+                ('altera_reserved_tdo', self.request("altera_reserved_tdo")),
+            ],
+            name='altera_jtag_reserved',
+        )
+        return reserved_jtag_pads

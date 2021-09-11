@@ -16,7 +16,7 @@ from litex.build.altera.common import AlteraJTAGPrimitiveInstance
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
-    def __init__(self, tms: Signal, tck: Signal, use_ieee_encoding=True, expose_signals=True):
+    def __init__(self, tms: Signal, tck: Signal, use_ieee_encoding=False, expose_signals=True):
         self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
         self.tck_cnt = tck_cnt = Signal(16)
@@ -188,8 +188,6 @@ class AlteraJTAG(Module):
 
         assert chain == 1
 
-
-
         # # #
 
         self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
@@ -210,7 +208,7 @@ class AlteraJTAG(Module):
 
 
             # etc?
-            # i_tdoutap = tdoutap, # fails synth on max20
+            # i_tdoutap = tdoutap, # fails synth on max10
             i_tdouser = tdouser,
             i_tmscore = tmscore,
             i_tckcore = tckcore,
@@ -241,9 +239,8 @@ class AlteraJTAG(Module):
             tck.eq(tckutap),
             tms.eq(tmsutap),
             tdi.eq(tdiutap),
-            tdouser.eq(tdo),
         ]
-        # self.sync.jtag_inv += tdouser.eq(tdo)
+        self.sync.jtag_inv += tdouser.eq(tdo)
 
 
 

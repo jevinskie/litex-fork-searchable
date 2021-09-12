@@ -19,8 +19,9 @@ class JTAGTAPFSM(Module):
     def __init__(self, tms: Signal, tck: Signal, use_ieee_encoding=False, expose_signals=True):
         self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
 
-        self.tck_cnt = tck_cnt = Signal(16)
-        self.sync.jtag += tck_cnt.eq(tck_cnt + 1)
+        # Debug counter
+        # self.tck_cnt = tck_cnt = Signal(16)
+        # self.sync.jtag += tck_cnt.eq(tck_cnt + 1)
 
         fsm.act('test_logic_reset',
             If(~tms, NextState('run_test_idle'))

@@ -98,7 +98,7 @@ class XilinxAsyncResetSynchronizer:
     def lower(dr):
         return XilinxAsyncResetSynchronizerImpl(dr.cd, dr.async_reset)
 
-# Common AsyncResetSynchronizer --------------------------------------------------------------------
+# Common AsyncResetSingleStageSynchronizer ---------------------------------------------------------
 
 class XilinxAsyncResetSingleStageSynchronizerImpl(Module):
     def __init__(self, cd, async_reset):

@@ -216,14 +216,14 @@ report_sdc -ignored -file "sdc_constraints.rpt"
 foreach_in_collection op [get_available_operating_conditions] {
   set_operating_conditions $op
 
-  report_timing -setup -npaths 128 -detail full_path -multi_corner \
+  report_timing -setup -npaths 25 -detail full_path -multi_corner \
     -panel_name "Critical paths"
 
-  report_timing -setup -npaths 128 -detail full_path -multi_corner \
+  report_timing -setup -npaths 25 -detail full_path -multi_corner \
     -file "timing_paths_full_$op.rpt" \
     -panel_name "Critical paths"
 
-  report_timing -setup -npaths 128 -detail full_path -multi_corner \
+  report_timing -setup -npaths 25 -detail full_path -multi_corner \
     -file "timing_paths_html_$op.html" \
     -panel_name "Critical paths for $op"
 }
@@ -252,7 +252,17 @@ def _run_script(script):
 # AlteraQuartusToolchain ---------------------------------------------------------------------------
 
 class AlteraQuartusToolchain:
-    attr_translate = {}
+    attr_translate = {
+        "keep":            ("keep",       "true"),
+        # "no_retiming":     ("keep",       "true"),
+        "async_reg":       ("async_reg",  "true"),
+        "mr_ff":           ("mr_ff",      "true"), # user-defined attribute
+        "ars_ff1":         ("ars_ff1",    "true"), # user-defined attribute
+        "ars_ff2":         ("ars_ff2",    "true"), # user-defined attribute
+        "arsss_ff":        ("arsss_ff",   "true"), # user-defined attribute
+        "clkbuf_clkctrl":  ("clkbuf_clkctrl", "true"), # user-defined attribute
+        "rd_ff":           ("rd_ff",      "true"), # user-defined attribute
+    }
 
     def __init__(self):
         self.clocks      = dict()

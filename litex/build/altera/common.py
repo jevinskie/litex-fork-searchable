@@ -9,6 +9,7 @@
 from migen import *
 from migen.fhdl.module import Module
 from migen.fhdl.specials import Instance
+from migen.genlib.cdc import ClockBuffer
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.build.io import *
@@ -128,16 +129,38 @@ class AlteraSDRInput:
     def lower(dr):
         return AlteraDDRInputImpl(dr.i, dr.o, Signal(), dr.clk)
 
-# JTAG Pin routing to top level ------------------------------------------------------------------
+# Common ClockBuffer -----------------------------------------------------------------------------
 
-class AlteraJTAGPrimitiveInstance(Instance):
-    def __init__(self, of, *items, **kwargs):
-        super().__init__(of, *items, **kwargs)
+class AlteraClockBufferImpl(Module):
+    def __init__(self, cd: ClockDomain):
+        self.clk_in = cd.clk
+        if hasattr(cd.clk, 'name'):
+            name_orig = self.clk_in.name
+            self.clk_in.name = f'{cd.clk.name}_unbuf'
+        else:
+            name_orig = None
+            self.clk_in.name = f'{cd.name}_clk_unbuf'
+        self.clk_out = Signal(name=name_orig if name_orig else f'clk_buf_cd_{cd.name}_clk_out')
+        self.specials.clk_buf = Instance(
+            "altclkctrl",
+            name=f'clk_buf_cd_{cd.name}_clkctrl',
+            attr={"clkbuf_clkctrl"},
+            i_inclk = self.clk_in,
+            o_outclk = self.clk_out,
+        )
+        cd.clk = self.clk_out
+
+
+class AlteraClockBuffer:
+    @staticmethod
+    def lower(dr):
+        return AlteraClockBufferImpl(dr.cd)
 
 # Special Overrides ------------------------------------------------------------------------------
 
 altera_special_overrides = {
     AsyncResetSynchronizer: AlteraAsyncResetSynchronizer,
+    ClockBuffer:            AlteraClockBuffer,
     DifferentialInput:      AlteraDifferentialInput,
     DifferentialOutput:     AlteraDifferentialOutput,
     DDROutput:              AlteraDDROutput,

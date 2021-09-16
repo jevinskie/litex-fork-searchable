@@ -173,9 +173,9 @@ class AlteraJTAG(Module):
         # inputs
         # self.tdoutap = tdoutap = Signal() # fails synth on max10
         self.tdouser = tdouser = Signal()
-        self.tmscore = tmscore = Signal()
-        self.tckcore = tckcore = Signal()
-        self.tdicore = tdicore = Signal()
+        # self.tmscore = tmscore = Signal()
+        # self.tckcore = tckcore = Signal()
+        # self.tdicore = tdicore = Signal()
         # self.corectl = corectl = Signal()
         # self.ntdopinena = ntdopinena = Signal()
 
@@ -183,7 +183,7 @@ class AlteraJTAG(Module):
         self.tmsutap = tmsutap = Signal()
         self.tckutap = tckutap = Signal()
         self.tdiutap = tdiutap = Signal()
-        self.tdocore = tdocore = Signal()
+        # self.tdocore = tdocore = Signal()
 
         assert chain == 1
 
@@ -209,16 +209,16 @@ class AlteraJTAG(Module):
             # etc?
             # i_tdoutap = tdoutap, # fails synth on max10
             i_tdouser = tdouser,
-            i_tmscore = tmscore,
-            i_tckcore = tckcore,
-            i_tdicore = tdicore,
+            # i_tmscore = tmscore, # nope on cyclone 10 lp
+            # i_tckcore = tckcore, # nope on cyclone 10 lp
+            # i_tdicore = tdicore, # nope on cyclone 10 lp
             # i_corectl = corectl,
             # i_ntdopinena = ntdopinena,
 
             o_tmsutap = tmsutap,
             o_tckutap = tckutap,
             o_tdiutap = tdiutap,
-            o_tdocore = tdocore,
+            # o_tdocore = tdocore, # nope on cyclone 10 lp
 
             # reserved pins
             i_tms = rtms,
@@ -246,6 +246,10 @@ class AlteraJTAG(Module):
 class MAX10JTAG(AlteraJTAG):
     def __init__(self, reserved_pads: Record, *args, **kwargs):
         AlteraJTAG.__init__(self, "fiftyfivenm_jtag", reserved_pads, *args, **kwargs)
+
+class Cyclone10LPJTAG(AlteraJTAG):
+    def __init__(self, reserved_pads: Record, *args, **kwargs):
+        AlteraJTAG.__init__(self, "cyclone10lp_jtag", reserved_pads, *args, **kwargs)
 
 # Altera Atlantic JTAG (UART over JTAG) ------------------------------------------------------------
 
@@ -373,6 +377,10 @@ class JTAGPHY(Module):
                 platform.add_reserved_jtag_decls()
                 reserved_pads = platform.get_reserved_jtag_pads()
                 jtag = MAX10JTAG(chain=chain, reserved_pads=reserved_pads)
+            elif device[:4].lower() in ["10cl"]:
+                platform.add_reserved_jtag_decls()
+                reserved_pads = platform.get_reserved_jtag_pads()
+                jtag = Cyclone10LPJTAG(chain=chain, reserved_pads=reserved_pads)
             else:
                 raise NotImplementedError
             self.submodules.jtag = jtag

@@ -9,7 +9,7 @@
 from migen import *
 from migen.fhdl.module import Module
 from migen.fhdl.specials import Instance
-from migen.genlib.cdc import ClockBuffer
+from migen.genlib.cdc import ClockBuffer, AsyncClockMux
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex.build.io import *
@@ -129,6 +129,32 @@ class AlteraSDRInput:
     def lower(dr):
         return AlteraDDRInputImpl(dr.i, dr.o, Signal(), dr.clk)
 
+# Common AsyncClockMux ----------------------------------------------------------------------------
+
+
+class AlteraAsyncClockMuxImpl(Module):
+    def __init__(self, cd_0: ClockDomain, cd_1: ClockDomain, cd_out: ClockDomain, sel: Signal):
+        self.inclk = Signal(2)
+        self.comb += [
+            self.inclk[0].eq(cd_0.clk),
+            self.inclk[1].eq(cd_1.clk),
+        ]
+        self.specials.clk_mux = clk_mux = Instance(
+            "altclkctrl",
+            name=f'acm_cd0_{cd_0.name}_cd1_{cd_1.name}_mux',
+            attr={"acm_mux"},
+            i_inclk = self.inclk,
+            i_ena = 1,
+            i_clkselect = sel,
+            o_outclk = cd_out.clk,
+        )
+
+
+class AlteraAsyncClockMux:
+    @staticmethod
+    def lower(dr):
+        return AlteraAsyncClockMuxImpl(dr.cd_0, dr.cd_1, dr.cd_out, dr.sel)
+
 # Common ClockBuffer -----------------------------------------------------------------------------
 
 class AlteraClockBufferImpl(Module):
@@ -159,6 +185,7 @@ class AlteraClockBuffer:
 # Special Overrides ------------------------------------------------------------------------------
 
 altera_special_overrides = {
+    AsyncClockMux:          AlteraAsyncClockMux,
     AsyncResetSynchronizer: AlteraAsyncResetSynchronizer,
     ClockBuffer:            AlteraClockBuffer,
     DifferentialInput:      AlteraDifferentialInput,

@@ -218,6 +218,28 @@ def _printattr(attr, attr_translate):
         r = "(* " + r + " *)"
     return r
 
+def _printattrsynth(attr, attr_translate):
+    r = ""
+    firsta = True
+    for attr in sorted(attr,
+                       key=lambda x: ("", x) if isinstance(x, str) else x):
+        if isinstance(attr, tuple):
+            # platform-dependent attribute
+            attr_name, attr_value = attr
+        else:
+            # translated attribute
+            at = attr_translate.get(attr, None)
+            if at is None:
+                continue
+            attr_name, attr_value = at
+        if not firsta:
+            r += ", "
+        firsta = False
+        const_expr = "\"" + attr_value + "\"" if not isinstance(attr_value, int) else str(attr_value)
+        r += attr_name
+    if r:
+        r = "/* synthesis " + r + " */"
+    return r
 
 def _printheader(f, ios, name, ns, attr_translate,
                  reg_initialization):
@@ -255,7 +277,12 @@ def _printheader(f, ios, name, ns, attr_translate,
         if attr:
             r += attr + " "
         if sig in wires:
-            r += "wire " + _printsig(ns, sig) + ";\n"
+            r += "wire " + _printsig(ns, sig)
+            if not attr:
+                r += ";\n"
+            else:
+                attr_synth = _printattrsynth(sig.attr, attr_translate)
+                r += f' {attr_synth} ;\n'
         else:
             if reg_initialization:
                 r += "reg " + _printsig(ns, sig) + " = " + _printexpr(ns, sig.init)[0] + ";\n"

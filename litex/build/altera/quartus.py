@@ -13,7 +13,7 @@ import sys
 import math
 from shutil import which
 
-from migen.fhdl.structure import _Fragment
+from migen.fhdl.structure import _Fragment, _Assign, _Slice
 
 from litex.build.generic_platform import Pins, IOStandard, Misc
 from litex.build import tools
@@ -74,25 +74,39 @@ def _build_qsf_constraints(named_sc, named_pc):
 
 # Timing Constraints (.sdc) ------------------------------------------------------------------------
 
-def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, additional_sdc_commands):
+def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, additional_sdc_commands, fragment):
     sdc = []
-    clock_pad_names = [vns.get_name(clk_pad) for clk_pad in clock_pads]
+    real_clock_pads = []
+    for sig, frag in clock_pads.items():
+        if isinstance(frag[0], _Slice):
+            real_sig = frag[0].value
+            real_clock_pads.append(real_sig)
 
     # Clock constraints
     for clk, period in sorted(clocks.items(), key=lambda x: x[0].duid):
+        clk_rhs = None
+        for cs in fragment.comb:
+            if not isinstance(cs, _Assign):
+                continue
+            if cs.l is not clk:
+                continue
+            clk_rhs = cs.r
+
+
         is_port = False
-        has_port = False
+        has_port = clk_rhs in real_clock_pads
         for sig, pins, others, resname in named_sc:
             clk_sig_name = vns.get_name(clk)
             if sig == clk_sig_name:
                 is_port = True
-            if clk_sig_name in clock_pad_names:
-                has_port = True
         if is_port:
             tpl = "create_clock -name {clk} -period {period} [get_ports {{{clk}}}]"
             sdc.append(tpl.format(clk=vns.get_name(clk), period=str(period)))
         else:
-            tpl = "create_clock -name {clk} -period {period} [get_nets {{{clk}}}]"
+            collection = "[get_nets {{{clk}}}]"
+            if has_port:
+                collection += f" [get_ports {{{{{clk_rhs.name_override}}}}}]"
+            tpl = "create_clock -name {clk} -period {period} " + collection
             sdc.append(tpl.format(clk=vns.get_name(clk), period=str(period)))
 
     # False path constraints
@@ -179,7 +193,7 @@ def _build_script(build_name, create_rbf, create_svf):
     script_contents += """
 set -e -u -x -o pipefail
 quartus_map --read_settings_files=on  --write_settings_files=off {build_name} -c {build_name}
-# quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist-map.vqm
+quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist-map.vqm
 quartus_fit --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
 quartus_asm --read_settings_files=off --write_settings_files=off {build_name} -c {build_name}
 quartus_cdb --read_settings_files=off --write_settings_files=off {build_name} -c {build_name} --vqm=atom-netlist-fit.vqm
@@ -307,7 +321,8 @@ class AlteraQuartusToolchain:
             vns                     = v_output.ns,
             named_sc                = named_sc,
             build_name              = build_name,
-            additional_sdc_commands = self.additional_sdc_commands)
+            additional_sdc_commands = self.additional_sdc_commands,
+            fragment                = fragment)
 
         # Generate design project and location constraints file (.qsf)
         _build_qsf(

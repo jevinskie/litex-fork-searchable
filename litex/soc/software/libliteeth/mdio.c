@@ -93,4 +93,28 @@ int mdio_read(int phyadr, int reg)
 	return r;
 }
 
+#ifdef USE_ALT_MODE_FOR_88E1111
+
+#define REG_CONTROL_COPPER 0
+#define REG_CONTROL_COPPER_BIT_RESET_SHIFT 15
+#define REG_EXT_PHY_SPECIFIC_STATUS 0x1b
+#define REG_EXT_PHY_SPECIFIC_STATUS_HW_CONFIG_SHIFT 0
+#define HW_CONFIG_GMII 0xF
+
+void init_gmii_for_88e1111(void) {
+    unsigned int r;
+
+    printf("Settiing 88e1111 to mode %d...\n", ALT_MODE_FOR_88E1111);
+    r = mdio_read(ALT_MODE_FOR_88E1111_PHYADDR, REG_EXT_PHY_SPECIFIC_STATUS);
+    r &= ~(0xF << REG_EXT_PHY_SPECIFIC_STATUS_HW_CONFIG_SHIFT);
+    r |= ALT_MODE_FOR_88E1111;
+    mdio_write(ALT_MODE_FOR_88E1111_PHYADDR, REG_EXT_PHY_SPECIFIC_STATUS, r);
+
+    // reset PHY
+    r = mdio_read(ALT_MODE_FOR_88E1111_PHYADDR, REG_CONTROL_COPPER);
+    r |= (1 << REG_CONTROL_COPPER_BIT_RESET_SHIFT);
+    mdio_write(ALT_MODE_FOR_88E1111_PHYADDR, REG_CONTROL_COPPER, r);
+}
+#endif
+
 #endif

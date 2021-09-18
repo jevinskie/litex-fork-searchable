@@ -65,6 +65,9 @@ static void boot_sequence(void)
 #if defined(CSR_SATA_SECTOR2MEM_BASE)
 	sataboot();
 #endif
+#ifdef USE_ALT_MODE_FOR_88E1111
+    init_gmii_for_88e1111();
+#endif
 #ifdef CSR_ETHMAC_BASE
 #ifdef CSR_ETHPHY_MODE_DETECTION_MODE_ADDR
 	eth_mode();

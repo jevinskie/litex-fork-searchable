@@ -105,7 +105,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
         else:
             collection = "[get_nets {{{clk}}}]"
             if has_port:
-                collection = "[add_to_collection  [get_nets {{{clk}}}] [get_ports {{{clk_rhs}}}]]"
+                collection = "[add_to_collection  [get_nets {{{clk}}}] [get_nodes {{{clk_rhs}}}]]"
             tpl = "create_clock -name {clk} -period {period} " + collection
             sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_rhs), period=str(period)))
 

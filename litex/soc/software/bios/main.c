@@ -66,7 +66,7 @@ static void boot_sequence(void)
 	sataboot();
 #endif
 #ifdef USE_ALT_MODE_FOR_88E1111
-    init_gmii_for_88e1111();
+    init_hw_config_for_88e1111();
 #endif
 #ifdef CSR_ETHMAC_BASE
 #ifdef CSR_ETHPHY_MODE_DETECTION_MODE_ADDR

@@ -17,7 +17,7 @@ void mdio_write(int phyadr, int reg, int val);
 int mdio_read(int phyadr, int reg);
 
 #ifdef USE_ALT_MODE_FOR_88E1111
-void init_gmii_for_88e1111(void);
+void init_hw_config_for_88e1111(void);
 #endif
 
 #endif /* __MDIO_H */

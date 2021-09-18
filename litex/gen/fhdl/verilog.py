@@ -403,8 +403,8 @@ def convert(f, ios=None, name="top",
                 ios |= {cd.clk, cd.rst}
             else:
                 msg = f"""Unresolved clock domain {cd_name}, availables:\n"""
-                for f in f.clock_domains:
-                    msg += f"- {f.name}\n"
+                for cd in f.clock_domains:
+                    msg += f"- {cd.name}\n"
                 raise Exception(msg)
 
     f = lower_complex_slices(f)

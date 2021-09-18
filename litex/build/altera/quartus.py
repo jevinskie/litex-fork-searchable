@@ -74,15 +74,20 @@ def _build_qsf_constraints(named_sc, named_pc):
 
 # Timing Constraints (.sdc) ------------------------------------------------------------------------
 
-def _build_sdc(clocks, false_paths, vns, named_sc, build_name, additional_sdc_commands):
+def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, additional_sdc_commands):
     sdc = []
+    clock_pad_names = [vns.get_name(clk_pad) for clk_pad in clock_pads]
 
     # Clock constraints
     for clk, period in sorted(clocks.items(), key=lambda x: x[0].duid):
         is_port = False
+        has_port = False
         for sig, pins, others, resname in named_sc:
-            if sig == vns.get_name(clk):
+            clk_sig_name = vns.get_name(clk)
+            if sig == clk_sig_name:
                 is_port = True
+            if clk_sig_name in clock_pad_names:
+                has_port = True
         if is_port:
             tpl = "create_clock -name {clk} -period {period} [get_ports {{{clk}}}]"
             sdc.append(tpl.format(clk=vns.get_name(clk), period=str(period)))
@@ -266,6 +271,7 @@ class AlteraQuartusToolchain:
 
     def __init__(self):
         self.clocks      = dict()
+        self.clock_pads  = dict()
         self.false_paths = set()
         self.additional_sdc_commands = []
         self.additional_qsf_commands = []
@@ -296,6 +302,7 @@ class AlteraQuartusToolchain:
         # Generate design timing constraints file (.sdc)
         _build_sdc(
             clocks                  = self.clocks,
+            clock_pads              = self.clock_pads,
             false_paths             = self.false_paths,
             vns                     = v_output.ns,
             named_sc                = named_sc,
@@ -334,6 +341,13 @@ class AlteraQuartusToolchain:
                 raise ValueError("Clock already constrained to {:.2f}ns, new constraint to {:.2f}ns"
                     .format(self.clocks[clk], period))
         self.clocks[clk] = period
+
+    def associate_clock_and_pad(self, platform, clk, clk_pad):
+        if clk in self.clock_pads:
+            if clk_pad not in self.clock_pads:
+                self.clock_pads[clk].append(clk_pad)
+        else:
+            self.clock_pads[clk] = list(clk_pad)
 
     def add_false_path_constraint(self, platform, from_, to):
         from_.attr.add("keep")

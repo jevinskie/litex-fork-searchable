@@ -46,6 +46,12 @@ class AlteraPlatform(GenericPlatform):
             clk = clk.p
         self.toolchain.add_period_constraint(self, clk, period)
 
+    def associate_clock_and_pad(self, clk, clk_pad):
+        if clk is None: return
+        if hasattr(clk, "p"):
+            clk = clk.p
+        self.toolchain.associate_clock_and_pad(self, clk, clk_pad)
+
     def add_false_path_constraint(self, from_, to):
         if hasattr(from_, "p"):
             from_ = from_.p

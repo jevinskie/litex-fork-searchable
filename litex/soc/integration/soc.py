@@ -1475,12 +1475,12 @@ class LiteXSoC(SoC):
         self.submodules.ethcore = ethcore
 
         # Create Etherbone clock domain and run it from sys clock domain.
-        self.clock_domains.cd_etherbone = ClockDomain("etherbone")
+        self.clock_domains.cd_etherbone = ClockDomain(name)
         self.comb += self.cd_etherbone.clk.eq(ClockSignal("sys"))
         self.comb += self.cd_etherbone.rst.eq(ResetSignal("sys"))
 
         # Etherbone
-        etherbone = LiteEthEtherbone(ethcore.udp, udp_port, buffer_depth=buffer_depth, cd="etherbone")
+        etherbone = LiteEthEtherbone(ethcore.udp, udp_port, buffer_depth=buffer_depth, cd=name)
         setattr(self.submodules, name, etherbone)
         self.add_wb_master(etherbone.wishbone.bus)
 
@@ -1491,6 +1491,9 @@ class LiteXSoC(SoC):
             self.platform.add_period_constraint(eth_rx_clk, 1e9/phy.rx_clk_freq)
             self.platform.add_period_constraint(eth_tx_clk, 1e9/phy.tx_clk_freq)
             self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
+            if hasattr(phy, 'clock_pads'):
+                self.platform.associate_clock_and_pad(eth_rx_clk, phy.clock_pads.rx)
+                self.platform.associate_clock_and_pad(eth_tx_clk, phy.clock_pads.tx)
 
     # Add SPI Flash --------------------------------------------------------------------------------
     def add_spi_flash(self, name="spiflash", mode="4x", dummy_cycles=None, clk_freq=None, module=None, phy=None, rate="1:1", **kwargs):

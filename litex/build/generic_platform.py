@@ -322,6 +322,9 @@ class GenericPlatform:
     def add_period_constraint(self, clk, period):
         raise NotImplementedError
 
+    def associate_clock_and_pad(self, clk, clk_pad):
+        raise NotImplementedError
+
     def add_false_path_constraint(self, from_, to):
         raise NotImplementedError
 

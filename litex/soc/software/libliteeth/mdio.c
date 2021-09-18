@@ -99,21 +99,31 @@ int mdio_read(int phyadr, int reg)
 #define REG_CONTROL_COPPER_BIT_RESET_SHIFT 15
 #define REG_EXT_PHY_SPECIFIC_STATUS 0x1b
 #define REG_EXT_PHY_SPECIFIC_STATUS_HW_CONFIG_SHIFT 0
-#define HW_CONFIG_GMII 0xF
 
-void init_gmii_for_88e1111(void) {
+void init_hw_config_for_88e1111(void) {
     unsigned int r;
+    unsigned int phyaddrs[] = {
+        ALT_MODE_FOR_88E1111_PHYADDR0,
+#ifdef ALT_MODE_FOR_88E1111_PHYADDR1
+        ALT_MODE_FOR_88E1111_PHYADDR1,
+#ifdef ALT_MODE_FOR_88E1111_PHYADDR2
+        ALT_MODE_FOR_88E1111_PHYADDR2,
+#endif
+#endif
+    };
 
-    printf("Settiing 88e1111 to mode %d...\n", ALT_MODE_FOR_88E1111);
-    r = mdio_read(ALT_MODE_FOR_88E1111_PHYADDR, REG_EXT_PHY_SPECIFIC_STATUS);
-    r &= ~(0xF << REG_EXT_PHY_SPECIFIC_STATUS_HW_CONFIG_SHIFT);
-    r |= ALT_MODE_FOR_88E1111;
-    mdio_write(ALT_MODE_FOR_88E1111_PHYADDR, REG_EXT_PHY_SPECIFIC_STATUS, r);
+    for (int i = 0; i < sizeof(phyaddrs)/sizeof(phyaddrs[0]); ++i) {
+        printf("Settiing 88e1111 phy[0x%x]to mode %d...\n", phyaddrs[i], ALT_MODE_FOR_88E1111);
+        r = mdio_read(phyaddrs[i], REG_EXT_PHY_SPECIFIC_STATUS);
+        r &= ~(0xF << REG_EXT_PHY_SPECIFIC_STATUS_HW_CONFIG_SHIFT);
+        r |= ALT_MODE_FOR_88E1111;
+        mdio_write(phyaddrs[i], REG_EXT_PHY_SPECIFIC_STATUS, r);
 
-    // reset PHY
-    r = mdio_read(ALT_MODE_FOR_88E1111_PHYADDR, REG_CONTROL_COPPER);
-    r |= (1 << REG_CONTROL_COPPER_BIT_RESET_SHIFT);
-    mdio_write(ALT_MODE_FOR_88E1111_PHYADDR, REG_CONTROL_COPPER, r);
+        // reset PHY
+        r = mdio_read(phyaddrs[i], REG_CONTROL_COPPER);
+        r |= (1 << REG_CONTROL_COPPER_BIT_RESET_SHIFT);
+        mdio_write(phyaddrs[i], REG_CONTROL_COPPER, r);
+    }
 }
 #endif
 

@@ -85,18 +85,41 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
     # Clock constraints
     for clk, period in sorted(clocks.items(), key=lambda x: x[0].duid):
         clk_rhs = None
-        for cs in fragment.comb:
-            if not isinstance(cs, _Assign):
-                continue
-            if not (cs.l is clk or cs.r is clk):
-                continue
-            if cs.l is clk:
-                clk_rhs = cs.r
-                break
+        clk_buf_in = None
+        clk_buf_out = None
+        clk_port = None
+        clk_driver = None
 
+        for sp in fragment.specials:
+            if not hasattr(sp, 'attr') or 'clkbuf_clkctrl' not in sp.attr:
+                continue
+            if clk is not sp.items[1].expr:
+                continue
+            clk_buf_in = sp.items[0].expr
+            clk_driver = clk_buf_in
+            clk_buf_out = sp.items[1].expr
+            print('found clkbuf')
+
+        if clk_buf_in is None:
+            for cs in fragment.comb:
+                if not isinstance(cs, _Assign):
+                    continue
+                if cs.l is clk:
+                    clk_driver = cs.r
+                    break
+        else:
+            for cs in fragment.comb:
+                if not isinstance(cs, _Assign):
+                    continue
+                if cs.l is clk_buf_in:
+                    clk_driver = cs.r
+                    break
+
+        if clk_driver is not None:
+            print(f'found clk_driver: {clk_driver} for clk: {clk}')
 
         is_port = False
-        has_port = clk_rhs is not None and clk_rhs in real_clock_pads
+        has_port = clk_driver is not None and clk_driver in real_clock_pads
         for sig, pins, others, resname in named_sc:
             clk_sig_name = vns.get_name(clk)
             if sig == clk_sig_name:
@@ -109,7 +132,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
             if has_port:
                 collection = "[add_to_collection  [get_nets {{{clk}}}] [get_nodes {{{clk_rhs}}}]]"
             tpl = "create_clock -name {clk} -period {period} " + collection
-            sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_rhs) if clk_rhs is not None else None, period=str(period)))
+            sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_driver) if clk_driver is not None else None, period=str(period)))
 
     # False path constraints
     for from_, to in sorted(false_paths, key=lambda x: (x[0].duid, x[1].duid)):

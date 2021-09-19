@@ -71,7 +71,7 @@ class Max10ADC(Module, AutoCSR):
         self.submodules.eoc_ps = PulseSynchronizer("adc", "sys")
         self.comb += [
             # self.soc_adc.eq(self.soc_ps.o),
-            self.soc_adc.eq(self.soc.storage),
+            # self.soc_adc.eq(self.soc.storage),
             self.eoc_ps.i.eq(self.eoc_sig),
             self.eoc.status.eq(self.eoc_sig),
         ]
@@ -84,19 +84,20 @@ class Max10ADC(Module, AutoCSR):
 
         self.ctrl_fsm.act("IDLE",
             If(self.soc.storage,
-                NextState("START"),
+                NextState("WAIT_FOR_EOC"),
             )
         )
         self.idle_flag = self.ctrl_fsm.ongoing("IDLE")
 
-        self.ctrl_fsm.act("START",
-            self.soc_ps.i.eq(1),
-            NextState("WAIT_FOR_EOC"),
-        )
-        self.start_flag = self.ctrl_fsm.ongoing("START")
+        # self.ctrl_fsm.act("START",
+        #     self.soc_ps.i.eq(1),
+        #     NextState("WAIT_FOR_EOC"),
+        # )
+        # self.start_flag = self.ctrl_fsm.ongoing("START")
 
         self.ctrl_fsm.act("WAIT_FOR_EOC",
-            If(self.eoc_ps.o,
+            self.soc_adc.eq(1),
+            If(self.eoc_sig,
                 NextValue(self.dout.status, self.dout_sig),
                 NextState("WAIT_FOR_SOC_LOW"),
             ),
@@ -121,4 +122,5 @@ class Max10ADC(Module, AutoCSR):
             o_dout = self.dout_sig,
             o_clk_dft = self.clk_dft,
             o_eoc = self.eoc_sig,
+            p_clkdiv = 0,
         )

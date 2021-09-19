@@ -117,6 +117,10 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
 
         if clk_driver is not None:
             print(f'found clk_driver: {clk_driver} for clk: {clk}')
+            if clk_buf_in is not None:
+                tpl = "create_clock -name {clk} -period {period} [get_nodes {{{clk_driver}}}]"
+                sdc.append(tpl.format(clk=vns.get_name(clk), clk_driver=vns.get_name(clk_driver), period=str(period)))
+                continue
 
         is_port = False
         has_port = clk_driver is not None and clk_driver in real_clock_pads

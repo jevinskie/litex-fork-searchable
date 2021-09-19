@@ -166,10 +166,10 @@ class AlteraClockBufferImpl(Module):
         else:
             name_orig = None
             self.clk_in.name = f'{cd.name}_clk_unbuf'
-        self.clk_out = Signal(name=name_orig if name_orig else f'clk_buf_cd_{cd.name}_clk_out')
+        self.clk_out = Signal(name=name_orig if name_orig else f'clkbuf_cd_{cd.name}_clk_out')
         self.specials.clk_buf = Instance(
             "altclkctrl",
-            name=f'clk_buf_cd_{cd.name}_clkctrl',
+            name=f'clkbuf_cd_{cd.name}_clkctrl',
             attr={"clkbuf_clkctrl"},
             i_inclk = self.clk_in,
             o_outclk = self.clk_out,

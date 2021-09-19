@@ -88,10 +88,11 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
         for cs in fragment.comb:
             if not isinstance(cs, _Assign):
                 continue
-            if cs.l is not clk:
+            if not (cs.l is clk or cs.r is clk):
                 continue
-            clk_rhs = cs.r
-            break
+            if cs.l is clk:
+                clk_rhs = cs.r
+                break
 
 
         is_port = False

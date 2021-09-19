@@ -98,7 +98,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
             clk_buf_in = sp.items[0].expr
             clk_driver = clk_buf_in
             clk_buf_out = sp.items[1].expr
-            print('found clkbuf')
+            # print('found clkbuf')
 
         if clk_buf_in is None:
             for cs in fragment.comb:
@@ -116,7 +116,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
                     break
 
         if clk_driver is not None:
-            print(f'found clk_driver: {clk_driver} for clk: {clk}')
+            # print(f'found clk_driver: {clk_driver} for clk: {clk}')
             if clk_buf_in is not None:
                 tpl = "create_clock -name {clk} -period {period} [get_nodes {{{clk_driver}}}]"
                 sdc.append(tpl.format(clk=vns.get_name(clk), clk_driver=vns.get_name(clk_driver), period=str(period)))

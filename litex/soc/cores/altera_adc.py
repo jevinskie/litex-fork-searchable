@@ -111,8 +111,7 @@ class Max10ADC(Module, AutoCSR):
         )
         self.wait_for_soc_low_flag = self.ctrl_fsm.ongoing("WAIT_FOR_SOC_LOW")
 
-
-        self.specials += Instance("fiftyfivenm_adcblock",
+        adcblock = Instance("fiftyfivenm_adcblock",
             name = f"adcblock{adc_num}",
             i_chsel = self.chsel.storage,
             i_soc = self.soc_adc,
@@ -124,3 +123,9 @@ class Max10ADC(Module, AutoCSR):
             o_eoc = self.eoc_sig,
             p_clkdiv = 0,
         )
+        self.specials += adcblock
+        for item in adcblock.items:
+            if isinstance(item, Instance.Parameter):
+                item.value.print_plain = True
+
+        print('wow')

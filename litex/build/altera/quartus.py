@@ -95,7 +95,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
 
 
         is_port = False
-        has_port = clk_rhs in real_clock_pads
+        has_port = clk_rhs is not None and clk_rhs in real_clock_pads
         for sig, pins, others, resname in named_sc:
             clk_sig_name = vns.get_name(clk)
             if sig == clk_sig_name:
@@ -108,7 +108,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
             if has_port:
                 collection = "[add_to_collection  [get_nets {{{clk}}}] [get_nodes {{{clk_rhs}}}]]"
             tpl = "create_clock -name {clk} -period {period} " + collection
-            sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_rhs), period=str(period)))
+            sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_rhs) if clk_rhs is not None else None, period=str(period)))
 
     # False path constraints
     for from_, to in sorted(false_paths, key=lambda x: (x[0].duid, x[1].duid)):

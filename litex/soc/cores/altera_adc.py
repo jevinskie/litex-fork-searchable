@@ -63,31 +63,38 @@ class Max10ADC(Module, AutoCSR):
         self.soc = CSRStorage()
         self.soc_adc = Signal()
         self.eoc = CSRStatus()
+        self.eoc_sig = Signal()
         self.tsen = CSRStorage()
         self.user_pwd = CSRStorage()
 
         self.submodules.soc_ps = PulseSynchronizer("sys", "adc")
         self.submodules.eoc_ps = PulseSynchronizer("adc", "sys")
         self.comb += [
-            self.soc_adc.eq(self.soc_ps.o),
-            self.eoc_ps.i.eq(self.eoc.status),
+            # self.soc_adc.eq(self.soc_ps.o),
+            self.soc_adc.eq(self.soc.storage),
+            self.eoc_ps.i.eq(self.eoc_sig),
+            self.eoc.status.eq(self.eoc_sig),
         ]
 
         self.adc_clk_cnt = Signal(8)
         self.sync.adc += self.adc_clk_cnt.eq(self.adc_clk_cnt + 1)
 
+
         self.submodules.ctrl_fsm = ResetInserter()(FSM(name="ctrl_fsm"))
+
         self.ctrl_fsm.act("IDLE",
             If(self.soc.storage,
                 NextState("START"),
             )
         )
         self.idle_flag = self.ctrl_fsm.ongoing("IDLE")
+
         self.ctrl_fsm.act("START",
             self.soc_ps.i.eq(1),
             NextState("WAIT_FOR_EOC"),
         )
         self.start_flag = self.ctrl_fsm.ongoing("START")
+
         self.ctrl_fsm.act("WAIT_FOR_EOC",
             If(self.eoc_ps.o,
                 NextValue(self.dout.status, self.dout_sig),
@@ -95,6 +102,7 @@ class Max10ADC(Module, AutoCSR):
             ),
         )
         self.wait_for_eoc_flag = self.ctrl_fsm.ongoing("WAIT_FOR_EOC")
+
         self.ctrl_fsm.act("WAIT_FOR_SOC_LOW",
             If(self.soc.storage == 0,
                 NextState("IDLE"),
@@ -112,5 +120,5 @@ class Max10ADC(Module, AutoCSR):
             i_usr_pwd = self.user_pwd.storage,
             o_dout = self.dout_sig,
             o_clk_dft = self.clk_dft,
-            o_eoc = self.eoc.status,
+            o_eoc = self.eoc_sig,
         )

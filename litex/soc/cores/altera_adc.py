@@ -1,4 +1,5 @@
 from migen import *
+from migen.genlib.cdc import PulseSynchronizer
 
 from litex.soc.interconnect.csr import *
 
@@ -56,24 +57,60 @@ class Max10ADC(Module, AutoCSR):
     def __init__(self, adc_num: int):
         self.adc_num = adc_num
         self.chsel = CSRStorage(5)
-        self.result = CSRStatus(12)
+        self.dout = CSRStatus(12)
+        self.dout_sig = Signal(12)
         self.clk_dft = Signal()
         self.soc = CSRStorage()
+        self.soc_adc = Signal()
         self.eoc = CSRStatus()
         self.tsen = CSRStorage()
         self.user_pwd = CSRStorage()
 
+        self.submodules.soc_ps = PulseSynchronizer("sys", "adc")
+        self.submodules.eoc_ps = PulseSynchronizer("adc", "sys")
+        self.comb += [
+            self.soc_adc.eq(self.soc_ps.o),
+            self.eoc_ps.i.eq(self.eoc.status),
+        ]
+
         self.adc_clk_cnt = Signal(8)
         self.sync.adc += self.adc_clk_cnt.eq(self.adc_clk_cnt + 1)
+
+        self.submodules.ctrl_fsm = ResetInserter()(FSM(name="ctrl_fsm"))
+        self.ctrl_fsm.act("IDLE",
+            If(self.soc.storage,
+                NextState("START"),
+            )
+        )
+        self.idle_flag = self.ctrl_fsm.ongoing("IDLE")
+        self.ctrl_fsm.act("START",
+            self.soc_ps.i.eq(1),
+            NextState("WAIT_FOR_EOC"),
+        )
+        self.start_flag = self.ctrl_fsm.ongoing("START")
+        self.ctrl_fsm.act("WAIT_FOR_EOC",
+            If(self.eoc_ps.o,
+                NextValue(self.dout.status, self.dout_sig),
+                NextState("WAIT_FOR_SOC_LOW"),
+            ),
+        )
+        self.wait_for_eoc_flag = self.ctrl_fsm.ongoing("WAIT_FOR_EOC")
+        self.ctrl_fsm.act("WAIT_FOR_SOC_LOW",
+            If(self.soc.storage == 0,
+                NextState("IDLE"),
+            ),
+        )
+        self.wait_for_soc_low_flag = self.ctrl_fsm.ongoing("WAIT_FOR_SOC_LOW")
+
 
         self.specials += Instance("fiftyfivenm_adcblock",
             name = f"adcblock{adc_num}",
             i_chsel = self.chsel.storage,
-            i_soc = self.soc.storage,
+            i_soc = self.soc_adc,
             i_clkin_from_pll_c0 = ClockSignal("adc"),
             i_tsen = self.tsen.storage,
             i_usr_pwd = self.user_pwd.storage,
-            o_dout = self.result.status,
+            o_dout = self.dout_sig,
             o_clk_dft = self.clk_dft,
             o_eoc = self.eoc.status,
         )

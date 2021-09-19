@@ -91,6 +91,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
             if cs.l is not clk:
                 continue
             clk_rhs = cs.r
+            break
 
 
         is_port = False

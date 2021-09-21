@@ -161,13 +161,22 @@ class AlteraClockBufferImpl(Module):
     def __init__(self, cd: ClockDomain, clk_in: Signal, clk_out: Signal):
         self.cd = cd
         self.clk_in = clk_in
+        self.clk_route_le = Signal()
         self.clk_out = clk_out
+
+        self.specials.clk_route_lcell = Instance(
+            "LCELL",
+            name=f'clkbuf_cd_{cd.name}_lcell',
+            attr={"clkbuf_lcell"},
+            i_in = self.clk_in,
+            o_out = self.clk_route_le,
+        )
 
         self.specials.clk_buf = Instance(
             "ALTCLKCTRL",
             name=f'clkbuf_cd_{cd.name}_clkctrl',
             attr={"clkbuf_clkctrl"},
-            i_inclk = self.clk_in,
+            i_inclk = self.clk_route_le,
             o_outclk = self.clk_out,
         )
 

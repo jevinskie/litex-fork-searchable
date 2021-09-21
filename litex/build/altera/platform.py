@@ -30,8 +30,8 @@ class AlteraPlatform(GenericPlatform):
 
     def get_verilog(self, *args, special_overrides=dict(), **kwargs):
         so = dict(common.altera_special_overrides)
-        if self.device.lower().startswith("10m"):
-            so.update(max10.max10_special_overrides)
+        # if self.device.lower().startswith("10m"):
+        #     so.update(max10.max10_special_overrides)
         so.update(special_overrides)
         return GenericPlatform.get_verilog(self, *args,
             special_overrides = so,

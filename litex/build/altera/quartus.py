@@ -353,11 +353,10 @@ class AlteraQuartusToolchain:
         v_output.write(v_file)
         platform.add_source(v_file)
 
-        if platform.device.lower().startswith("10m"):
-            # platform.add_source('[file join $::quartus(ip_rootpath) "altera/altera_gpio_lite/altera_gpio_lite.sv"]', language='systemverilog', raw_path=True)
-            self.additional_qsf_tcl_commands.append(
-                'set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(ip_rootpath) "altera/altera_gpio_lite/altera_gpio_lite.sv"] -library work'
-            )
+        # if platform.device.lower().startswith("10m"):
+        #     self.additional_qsf_tcl_commands.append(
+        #         'set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(ip_rootpath) "altera/altera_gpio_lite/altera_gpio_lite.sv"] -library work'
+        #     )
 
         # Generate design timing constraints file (.sdc)
         _build_sdc(

@@ -28,9 +28,15 @@ class IntelClocking(Module, AutoCSR):
         self.params     = {}
 
     def register_clkin(self, clkin, freq):
-        self.clkin = Signal()
+        if hasattr(clkin, 'name'):
+            pll_clkin_name = f'{clkin.name}_altpll_clkin'
+        elif hasattr(clkin, 'cd'):
+            pll_clkin_name = f'cd_{clkin.cd}_altpll_clkin'
+        else:
+            pll_clkin_name = 'altpll_clkin'
+        self.clkin = Signal(name=pll_clkin_name)
         if isinstance(clkin, (Signal, ClockSignal)):
-            self.comb += self.clkin.eq(clkin)
+            self.clkin = clkin
         elif isinstance(clkin, Record):
             self.specials += DifferentialInput(clkin.p, clkin.n, self.clkin)
         else:
@@ -38,9 +44,11 @@ class IntelClocking(Module, AutoCSR):
         self.clkin_freq = freq
         register_clkin_log(self.logger, clkin, freq)
 
-    def create_clkout(self, cd, freq, phase=0, margin=1e-2, with_reset=True):
+    def create_clkout(self, cd, freq, phase=0, margin=1e-2, with_reset=True, name=None):
         assert self.nclkouts < self.nclkouts_max
-        clkout = Signal()
+        if name is None:
+            name = f'altpll_clkout_cd_{cd.name}'
+        clkout = Signal(name=name)
         self.clkouts[self.nclkouts] = (clkout, freq, phase, margin)
         if with_reset:
             self.specials += AsyncResetSynchronizer(cd, ~self.locked)
@@ -84,7 +92,9 @@ class IntelClocking(Module, AutoCSR):
     def do_finalize(self):
         assert hasattr(self, "clkin")
         config = self.compute_config()
-        clks = Signal(self.nclkouts)
+        # clks = Signal(self.nclkouts)
+        clkout_sigs = [self.clkouts[i][0] for i in sorted(self.clkouts.keys())]
+        clks = Cat(*clkout_sigs)
         self.params.update(
             p_BANDWIDTH_TYPE         = "AUTO",
             p_COMPENSATE_CLOCK       = "CLK0",

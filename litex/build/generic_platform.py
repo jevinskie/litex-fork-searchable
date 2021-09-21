@@ -365,7 +365,7 @@ class GenericPlatform:
             except ConstraintError:
                 pass
 
-    def add_source(self, filename, language=None, library=None):
+    def add_source(self, filename, language=None, library=None, raw_path=False):
         if language is None:
             language = tools.language_by_filename(filename)
         if library is None:
@@ -373,7 +373,9 @@ class GenericPlatform:
         for f, _, _ in self.sources:
             if f == filename:
                 return
-        self.sources.append((os.path.abspath(filename), language, library))
+        if not raw_path:
+            filename = os.path.abspath(filename)
+        self.sources.append((filename, language, library))
 
     def add_sources(self, path, *filenames, language=None, library=None):
         for f in filenames:

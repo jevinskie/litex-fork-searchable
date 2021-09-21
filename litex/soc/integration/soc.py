@@ -1453,7 +1453,8 @@ class LiteXSoC(SoC):
         mac_address  = 0x10e2d5000000,
         ip_address   = "192.168.100.50",
         udp_port     = 1234,
-        buffer_depth = 4):
+        buffer_depth = 4,
+        dummy_checksum = False):
         # Imports
         from liteeth.core import LiteEthUDPIPCore
         from liteeth.frontend.etherbone import LiteEthEtherbone
@@ -1466,13 +1467,14 @@ class LiteXSoC(SoC):
             mac_address = mac_address,
             ip_address  = ip_address,
             clk_freq    = self.clk_freq,
-            with_sim_hack = isinstance(phy, LiteEthPHYModel))
+            with_sim_hack = isinstance(phy, LiteEthPHYModel),
+            dummy_checksum = dummy_checksum)
         # Use PHY's eth_tx/eth_rx clock domains.
         ethcore = ClockDomainsRenamer({
             "eth_tx": phy_cd + "_tx",
             "eth_rx": phy_cd + "_rx",
             "sys":    phy_cd + "_rx"})(ethcore)
-        self.submodules.ethcore = ethcore
+        setattr(self.submodules, f"{name}_ethcore", ethcore)
 
         # Create Etherbone clock domain and run it from sys clock domain.
         self.clock_domains.cd_etherbone = ClockDomain(name)

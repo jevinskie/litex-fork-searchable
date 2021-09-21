@@ -75,7 +75,10 @@ def _build_qsf_constraints(named_sc, named_pc):
 # Timing Constraints (.sdc) ------------------------------------------------------------------------
 
 def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, additional_sdc_commands, fragment):
-    sdc = []
+    sdc = [
+        "derive_pll_clocks -create_base_clocks -use_net_name",
+        "derive_clock_uncertainty",
+    ]
     real_clock_pads = []
     for sig, frag in clock_pads.items():
         if isinstance(frag[0], _Slice):
@@ -134,7 +137,7 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
         else:
             collection = "[get_nets {{{clk}}}]"
             if has_port:
-                collection = "[add_to_collection  [get_nets {{{clk}}}] [get_nodes {{{clk_rhs}}}]]"
+                collection = "[get_nodes {{{clk_rhs}}}]"
             tpl = "create_clock -name {clk} -period {period} " + collection
             sdc.append(tpl.format(clk=vns.get_name(clk), clk_rhs=vns.get_name(clk_driver) if clk_driver is not None else None, period=str(period)))
 
@@ -151,8 +154,12 @@ def _build_sdc(clocks, clock_pads, false_paths, vns, named_sc, build_name, addit
 
 # Project (.qsf) -----------------------------------------------------------------------------------
 
-def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, additional_qsf_commands):
+def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, additional_qsf_commands, additional_qsf_tcl_commands):
     qsf = []
+
+    if len(additional_qsf_tcl_commands):
+        qsf.append(f"set_global_assignment -name SOURCE_TCL_SCRIPT_FILE {build_name}.tcl")
+        tools.write_to_file("{}.tcl".format(build_name), "\n".join(additional_qsf_tcl_commands))
 
     # Set device
     qsf.append("set_global_assignment -name DEVICE {}".format(device))
@@ -192,6 +199,9 @@ def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, 
     qsf.append("set_global_assignment -name SDC_FILE jtag.sdc")
     jtag_sdc_txt = open(Path(__file__).parent / 'jtag.sdc').read()
     tools.write_to_file("jtag.sdc", jtag_sdc_txt)
+
+    # TimingQuest synchronizer analysis
+    qsf.append("set_global_assignment -name SYNCHRONIZER_IDENTIFICATION AUTO")
 
     # Add additional commands
     qsf += additional_qsf_commands
@@ -318,6 +328,7 @@ class AlteraQuartusToolchain:
         self.false_paths = set()
         self.additional_sdc_commands = []
         self.additional_qsf_commands = []
+        self.additional_qsf_tcl_commands = []
 
     def build(self, platform, fragment,
         build_dir      = "build",
@@ -342,6 +353,12 @@ class AlteraQuartusToolchain:
         v_output.write(v_file)
         platform.add_source(v_file)
 
+        if platform.device.lower().startswith("10m"):
+            # platform.add_source('[file join $::quartus(ip_rootpath) "altera/altera_gpio_lite/altera_gpio_lite.sv"]', language='systemverilog', raw_path=True)
+            self.additional_qsf_tcl_commands.append(
+                'set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(ip_rootpath) "altera/altera_gpio_lite/altera_gpio_lite.sv"] -library work'
+            )
+
         # Generate design timing constraints file (.sdc)
         _build_sdc(
             clocks                  = self.clocks,
@@ -362,7 +379,8 @@ class AlteraQuartusToolchain:
             named_sc                = named_sc,
             named_pc                = named_pc,
             build_name              = build_name,
-            additional_qsf_commands = self.additional_qsf_commands)
+            additional_qsf_commands = self.additional_qsf_commands,
+            additional_qsf_tcl_commands = self.additional_qsf_tcl_commands)
 
         _build_quartus_ini()
 

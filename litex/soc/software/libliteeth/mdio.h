@@ -20,4 +20,8 @@ int mdio_read(int phyadr, int reg);
 void init_hw_config_for_88e1111(void);
 #endif
 
+#ifdef USE_DELAY_MODE_FOR_88E1111
+void init_delay_for_88e1111(void);
+#endif
+
 #endif /* __MDIO_H */

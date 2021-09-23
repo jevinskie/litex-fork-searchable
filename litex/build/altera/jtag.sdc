@@ -252,14 +252,18 @@ proc set_optional_ntrst_timing_spec { } {
 
 
 # JTAG Signal Constraints constrain the TCK port
-create_clock -name tck -period 40 [get_ports altera_reserved_tck]
+create_clock -name tck -period 20 [get_ports {altera_reserved_tck}]
 # Cut all paths to and from tck
-set_clock_groups -asynchronous -group [get_clocks altera_reserved_tck]
+set_clock_groups -asynchronous -group [get_clocks tck]
+
+# Pack TDOUSER register next to JTAG block
+set_max_delay -to [get_ports { altera_reserved_tdo } ] 0
+
 # Constrain the TDI port
-set_input_delay -clock altera_reserved_tck -clock_fall 1 [get_ports altera_reserved_tdi]
+set_input_delay -clock tck -clock_fall 1 [get_ports altera_reserved_tdi]
 # Constrain the TMS port
-set_input_delay -clock altera_reserved_tck -clock_fall 1 [get_ports altera_reserved_tms]
+set_input_delay -clock tck -clock_fall 1 [get_ports altera_reserved_tms]
 # Constrain the TDO port
-set_output_delay -clock altera_reserved_tck -clock_fall 1 [get_ports altera_reserved_tdo]
+set_output_delay -clock tck -clock_fall 1 [get_ports altera_reserved_tdo]
 
 

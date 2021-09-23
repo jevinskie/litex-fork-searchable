@@ -158,25 +158,29 @@ class AlteraAsyncClockMux:
 # Common ClockBuffer -----------------------------------------------------------------------------
 
 class AlteraClockBufferImpl(Module):
-    def __init__(self, cd: ClockDomain, clk_in: Signal, clk_out: Signal):
+    def __init__(self, cd: ClockDomain, clk_in: Signal, clk_out: Signal, force_le_routing=False):
         self.cd = cd
         self.clk_in = clk_in
-        self.clk_route_le = Signal()
         self.clk_out = clk_out
+        intermediate_clk = self.clk_in
 
-        self.specials.clk_route_lcell = Instance(
-            "LCELL",
-            name=f'clkbuf_cd_{cd.name}_lcell',
-            attr={"clkbuf_lcell"},
-            i_in = self.clk_in,
-            o_out = self.clk_route_le,
-        )
+        if force_le_routing:
+            self.clk_route_le = Signal()
+            intermediate_clk = self.clk_route_le
+
+            self.specials.clk_route_lcell = Instance(
+                "LCELL",
+                name=f'clkbuf_cd_{cd.name}_lcell',
+                attr={"clkbuf_lcell"},
+                i_in = self.clk_in,
+                o_out = self.clk_route_le,
+            )
 
         self.specials.clk_buf = Instance(
             "ALTCLKCTRL",
             name=f'clkbuf_cd_{cd.name}_clkctrl',
             attr={"clkbuf_clkctrl"},
-            i_inclk = self.clk_route_le,
+            i_inclk = intermediate_clk,
             o_outclk = self.clk_out,
         )
 
@@ -184,7 +188,7 @@ class AlteraClockBufferImpl(Module):
 class AlteraClockBuffer:
     @staticmethod
     def lower(dr):
-        return AlteraClockBufferImpl(dr.cd, dr.clk_in, dr.clk_out)
+        return AlteraClockBufferImpl(dr.cd, dr.clk_in, dr.clk_out, force_le_routing=dr.force_le_routing)
 
 # Special Overrides ------------------------------------------------------------------------------
 

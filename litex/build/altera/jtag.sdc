@@ -252,9 +252,9 @@ proc set_optional_ntrst_timing_spec { } {
 
 
 # JTAG Signal Constraints constrain the TCK port
-create_clock -name tck -period 30 [get_ports {altera_reserved_tck}]
+create_clock -name {tck} -period 20 [get_ports {altera_reserved_tck}]
 # Cut all paths to and from tck
-set_clock_groups -asynchronous -group [get_clocks tck]
+set_clock_groups -asynchronous -group {tck}
 
 # Pack TDOUSER register next to JTAG block
 set_max_delay -to [get_ports { altera_reserved_tdo } ] 0
@@ -267,3 +267,9 @@ set_input_delay -clock tck -clock_fall 1 [get_ports {altera_reserved_tms}]
 set_output_delay -clock tck -clock_fall 1 [get_ports {altera_reserved_tdo}]
 
 
+# Cut a few timing paths that are not related to JTAG logic in
+# the FPGA core, such as security mode.
+set_false_path -from [get_ports {altera_reserved_tdi}] -to [get_ports {altera_reserved_tdo}]
+if { [get_collection_size [get_registers -nowarn *~jtag_reg]] > 0 } {
+    set_false_path -from [get_registers *~jtag_reg] -to [get_ports {altera_reserved_tdo}]
+}

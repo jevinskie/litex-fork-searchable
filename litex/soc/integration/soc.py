@@ -233,13 +233,17 @@ class SoCBusHandler(Module):
         for _, search_region in search_regions.items():
             origin = search_region.origin
             while (origin + size) < (search_region.origin + search_region.size_pow2):
+                # Align Origin on Size.
+                if (origin%size):
+                    origin += (origin - origin%size)
+                    continue
                 # Create a Candidate.
                 candidate = SoCRegion(origin=origin, size=size, cached=cached)
                 overlap   = False
                 # Check Candidate does not overlap with allocated existing regions.
                 for _, allocated in self.regions.items():
                     if self.check_regions_overlap({"0": allocated, "1": candidate}) is not None:
-                        origin  = allocated.origin + allocated.size_pow2
+                        origin += size
                         overlap = True
                         break
                 if not overlap:
@@ -1231,7 +1235,7 @@ class LiteXSoC(SoC):
         from litex.soc.cores import uart
         from litex.soc.cores.jtag import JTAGPHY
         self.check_if_exists("jtabone")
-        self.submodules.jtagbone_phy = JTAGPHY(device=self.platform.device, chain=chain, platform=self.platform)
+        self.submodules.jtagbone_phy = JTAGPHY(device=self.platform.device, chain=chain)
         self.submodules.jtagbone = uart.UARTBone(phy=self.jtagbone_phy, clk_freq=self.sys_clk_freq)
         self.bus.add_master(name="jtagbone", master=self.jtagbone.wishbone)
 
@@ -1281,8 +1285,8 @@ class LiteXSoC(SoC):
 
         # LiteDRAM BIST.
         if with_bist:
-            self.submodules.sdram_generator = LiteDRAMBISTGenerator(self.sdram.crossbar.get_port(name="bist_gen_port"))
-            self.submodules.sdram_checker = LiteDRAMBISTChecker(self.sdram.crossbar.get_port(name="bist_chk_port"))
+            self.submodules.sdram_generator = LiteDRAMBISTGenerator(self.sdram.crossbar.get_port())
+            self.submodules.sdram_checker = LiteDRAMBISTChecker(self.sdram.crossbar.get_port())
 
         if not with_soc_interconnect: return
 
@@ -1362,7 +1366,7 @@ class LiteXSoC(SoC):
         )
         if connect_main_bus_to_dram:
             # Request a LiteDRAM native port.
-            self.dram_port = port = self.sdram.crossbar.get_port()
+            port = self.sdram.crossbar.get_port()
             port.data_width = 2**int(log2(port.data_width)) # Round to nearest power of 2.
 
             # Create Wishbone Slave.
@@ -1397,9 +1401,10 @@ class LiteXSoC(SoC):
 
     # Add Ethernet ---------------------------------------------------------------------------------
     def add_ethernet(self, name="ethmac", phy=None, phy_cd="eth", dynamic_ip=False, software_debug=False,
-        nrxslots       = 2,
-        ntxslots       = 2,
-        with_timestamp = False):
+        nrxslots                = 2,
+        ntxslots                = 2,
+        with_timestamp          = False,
+        with_timing_constraints = True):
         # Imports
         from liteeth.mac import LiteEthMAC
         from liteeth.phy.model import LiteEthPHYModel
@@ -1416,8 +1421,7 @@ class LiteXSoC(SoC):
             nrxslots   = nrxslots,
             ntxslots   = ntxslots,
             timestamp  = None if not with_timestamp else self.timer0.uptime_cycles,
-            with_preamble_crc = not software_debug,
-            with_sim_hack = isinstance(phy, LiteEthPHYModel))
+            with_preamble_crc = not software_debug)
         # Use PHY's eth_tx/eth_rx clock domains.
         ethmac = ClockDomainsRenamer({
             "eth_tx": phy_cd + "_tx",
@@ -1431,14 +1435,6 @@ class LiteXSoC(SoC):
         if self.irq.enabled:
             self.irq.add(name, use_loc_if_exists=True)
 
-        # Timing constraints
-        eth_rx_clk = getattr(phy, "crg", phy).cd_eth_rx.clk
-        eth_tx_clk = getattr(phy, "crg", phy).cd_eth_tx.clk
-        if not isinstance(phy, LiteEthPHYModel):
-            self.platform.add_period_constraint(eth_rx_clk, 1e9/phy.rx_clk_freq)
-            self.platform.add_period_constraint(eth_tx_clk, 1e9/phy.tx_clk_freq)
-            self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
-
         # Dynamic IP (if enabled).
         if dynamic_ip:
             self.add_constant("ETH_DYNAMIC_IP")
@@ -1448,13 +1444,22 @@ class LiteXSoC(SoC):
             self.add_constant("ETH_UDP_TX_DEBUG")
             self.add_constant("ETH_UDP_RX_DEBUG")
 
+        # Timing constraints
+        if with_timing_constraints:
+            eth_rx_clk = getattr(phy, "crg", phy).cd_eth_rx.clk
+            eth_tx_clk = getattr(phy, "crg", phy).cd_eth_tx.clk
+            if not isinstance(phy, LiteEthPHYModel):
+                self.platform.add_period_constraint(eth_rx_clk, 1e9/phy.rx_clk_freq)
+                self.platform.add_period_constraint(eth_tx_clk, 1e9/phy.tx_clk_freq)
+                self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
+
     # Add Etherbone --------------------------------------------------------------------------------
     def add_etherbone(self, name="etherbone", phy=None, phy_cd="eth",
-        mac_address  = 0x10e2d5000000,
-        ip_address   = "192.168.100.50",
-        udp_port     = 1234,
-        buffer_depth = 4,
-        dummy_checksum = False):
+        mac_address             = 0x10e2d5000000,
+        ip_address              = "192.168.1.50",
+        udp_port                = 1234,
+        buffer_depth            = 4,
+        with_timing_constraints = True):
         # Imports
         from liteeth.core import LiteEthUDPIPCore
         from liteeth.frontend.etherbone import LiteEthEtherbone
@@ -1466,36 +1471,32 @@ class LiteXSoC(SoC):
             phy         = phy,
             mac_address = mac_address,
             ip_address  = ip_address,
-            clk_freq    = self.clk_freq,
-            with_sim_hack = isinstance(phy, LiteEthPHYModel),
-            dummy_checksum = dummy_checksum)
+            clk_freq    = self.clk_freq)
         # Use PHY's eth_tx/eth_rx clock domains.
         ethcore = ClockDomainsRenamer({
             "eth_tx": phy_cd + "_tx",
             "eth_rx": phy_cd + "_rx",
             "sys":    phy_cd + "_rx"})(ethcore)
-        setattr(self.submodules, f"{name}_ethcore", ethcore)
+        self.submodules.ethcore = ethcore
 
         # Create Etherbone clock domain and run it from sys clock domain.
-        self.clock_domains.cd_etherbone = ClockDomain(name)
+        self.clock_domains.cd_etherbone = ClockDomain("etherbone")
         self.comb += self.cd_etherbone.clk.eq(ClockSignal("sys"))
         self.comb += self.cd_etherbone.rst.eq(ResetSignal("sys"))
 
         # Etherbone
-        etherbone = LiteEthEtherbone(ethcore.udp, udp_port, buffer_depth=buffer_depth, cd=name)
+        etherbone = LiteEthEtherbone(ethcore.udp, udp_port, buffer_depth=buffer_depth, cd="etherbone")
         setattr(self.submodules, name, etherbone)
         self.add_wb_master(etherbone.wishbone.bus)
 
         # Timing constraints
-        eth_rx_clk = getattr(phy, "crg", phy).cd_eth_rx.clk
-        eth_tx_clk = getattr(phy, "crg", phy).cd_eth_tx.clk
-        if not isinstance(phy, LiteEthPHYModel):
-            self.platform.add_period_constraint(eth_rx_clk, 1e9/phy.rx_clk_freq)
-            self.platform.add_period_constraint(eth_tx_clk, 1e9/phy.tx_clk_freq)
-            self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
-            if hasattr(phy, 'clock_pads'):
-                self.platform.associate_clock_and_pad(eth_rx_clk, phy.clock_pads.rx)
-                self.platform.associate_clock_and_pad(eth_tx_clk, phy.clock_pads.tx)
+        if with_timing_constraints:
+            eth_rx_clk = getattr(phy, "crg", phy).cd_eth_rx.clk
+            eth_tx_clk = getattr(phy, "crg", phy).cd_eth_tx.clk
+            if not isinstance(phy, LiteEthPHYModel):
+                self.platform.add_period_constraint(eth_rx_clk, 1e9/phy.rx_clk_freq)
+                self.platform.add_period_constraint(eth_tx_clk, 1e9/phy.tx_clk_freq)
+                self.platform.add_false_path_constraints(self.crg.cd_sys.clk, eth_rx_clk, eth_tx_clk)
 
     # Add SPI Flash --------------------------------------------------------------------------------
     def add_spi_flash(self, name="spiflash", mode="4x", dummy_cycles=None, clk_freq=None, module=None, phy=None, rate="1:1", **kwargs):

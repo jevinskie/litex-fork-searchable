@@ -63,10 +63,9 @@ class AlteraPlatform(GenericPlatform):
         ])
 
     def get_reserved_jtag_pads(self):
-        reserved_jtag_pads = {
-            'altera_reserved_tms': self.request("altera_reserved_tms"),
-            'altera_reserved_tck': self.request("altera_reserved_tck"),
-            'altera_reserved_tdi': self.request("altera_reserved_tdi"),
-            'altera_reserved_tdo': self.request("altera_reserved_tdo"),
+        return {
+            "altera_reserved_tms": self.request("altera_reserved_tms"),
+            "altera_reserved_tck": self.request("altera_reserved_tck"),
+            "altera_reserved_tdi": self.request("altera_reserved_tdi"),
+            "altera_reserved_tdo": self.request("altera_reserved_tdo"),
         }
-        return reserved_jtag_pads

@@ -6,84 +6,82 @@
 # Copyright (c) 2017 Robert Jordens <jordens@gmail.com>
 # Copyright (c) 2021 Gregory Davill <greg.davill@gmail.com>
 # Copyright (c) 2021 Gabriel L. Somlo <somlo@cmu.edu>
+# Copyright (c) 2021 Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
 from migen.genlib.cdc import AsyncResetSynchronizer, MultiReg
 
 from litex.soc.interconnect import stream
+# for TAP FSM's enhanced reset logic
+import litex.gen.fhdl.migen_addons
 
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
     def __init__(self, tms: Signal, tck: Signal, expose_signals=True):
-        self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM())
+        self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM(reset_state="test_logic_reset"))
 
-        fsm.act('test_logic_reset',
-            If(~tms, NextState('run_test_idle'))
+        fsm.act("test_logic_reset",
+            If(~tms, NextState("run_test_idle"))
         )
-        fsm.act('run_test_idle',
-            If( tms, NextState('select_dr_scan'))
+        fsm.act("run_test_idle",
+            If( tms, NextState("select_dr_scan"))
         )
 
         # DR
-        fsm.act('select_dr_scan',
-            If(~tms, NextState('capture_dr')    ).Else(NextState('select_ir_scan'))
+        fsm.act("select_dr_scan",
+            If(~tms, NextState("capture_dr")    ).Else(NextState("select_ir_scan"))
         )
-        fsm.act('capture_dr',
-            If(~tms, NextState('shift_dr')      ).Else(NextState('exit1_dr'))
+        fsm.act("capture_dr",
+            If(~tms, NextState("shift_dr")      ).Else(NextState("exit1_dr"))
         )
-        fsm.act('shift_dr',
-            If( tms, NextState('exit1_dr'))
+        fsm.act("shift_dr",
+            If( tms, NextState("exit1_dr"))
         )
-        fsm.act('exit1_dr',
-            If(~tms, NextState('pause_dr')      ).Else(NextState('update_dr'))
+        fsm.act("exit1_dr",
+            If(~tms, NextState("pause_dr")      ).Else(NextState("update_dr"))
         )
-        fsm.act('pause_dr',
-            If( tms, NextState('exit2_dr'))
+        fsm.act("pause_dr",
+            If( tms, NextState("exit2_dr"))
         )
-        fsm.act('exit2_dr',
-            If( tms, NextState('update_dr')     ).Else(NextState('shift_dr'))
+        fsm.act("exit2_dr",
+            If( tms, NextState("update_dr")     ).Else(NextState("shift_dr"))
         )
-        fsm.act('update_dr',
-            If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
+        fsm.act("update_dr",
+            If( tms, NextState("select_dr_scan")).Else(NextState("run_test_idle"))
         )
 
         # IR
-        fsm.act('select_ir_scan',
-            If(~tms, NextState('capture_ir')    ).Else(NextState('test_logic_reset'))
+        fsm.act("select_ir_scan",
+            If(~tms, NextState("capture_ir")    ).Else(NextState("test_logic_reset"))
         )
-        fsm.act('capture_ir',
-            If(~tms, NextState('shift_ir')      ).Else(NextState('exit1_ir'))
+        fsm.act("capture_ir",
+            If(~tms, NextState("shift_ir")      ).Else(NextState("exit1_ir"))
         )
-        fsm.act('shift_ir',
-            If( tms, NextState('exit1_ir'))
+        fsm.act("shift_ir",
+            If( tms, NextState("exit1_ir"))
         )
-        fsm.act('exit1_ir',
-            If(~tms, NextState('pause_ir')      ).Else(NextState('update_ir'))
+        fsm.act("exit1_ir",
+            If(~tms, NextState("pause_ir")      ).Else(NextState("update_ir"))
         )
-        fsm.act('pause_ir',
-            If( tms, NextState('exit2_ir'))
+        fsm.act("pause_ir",
+            If( tms, NextState("exit2_ir"))
         )
-        fsm.act('exit2_ir',
-            If( tms, NextState('update_ir')     ).Else(NextState('shift_ir'))
+        fsm.act("exit2_ir",
+            If( tms, NextState("update_ir")     ).Else(NextState("shift_ir"))
         )
-        fsm.act('update_ir',
-            If( tms, NextState('select_dr_scan')).Else(NextState('run_test_idle'))
+        fsm.act("update_ir",
+            If( tms, NextState("select_dr_scan")).Else(NextState("run_test_idle"))
         )
 
         if expose_signals:
             for state_name in fsm.actions:
-                reset_val = 0
-                if state_name == 'test_logic_reset':
-                    reset_val = 1
-                sig = fsm.ongoing(state_name)
-                sig.reset = reset_val
+                state_sig = fsm.ongoing(state_name)
                 SHOUTING_NAME = state_name.upper()
-                hcs_name = SHOUTING_NAME
-                hcs = Signal(name=hcs_name)
-                setattr(self, hcs_name, hcs)
-                self.comb += hcs.eq(sig)
+                shouting_sig = Signal(name=SHOUTING_NAME)
+                setattr(self, SHOUTING_NAME, shouting_sig)
+                self.comb += shouting_sig.eq(state_sig)
 
 
 # Altera JTAG --------------------------------------------------------------------------------------
@@ -126,7 +124,7 @@ class AlteraJTAG(Module):
         # create falling-edge JTAG clock domain for TAP FSM
         self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
         self.comb += ClockSignal("jtag_inv").eq(~ClockSignal("jtag"))
-        self.comb += ResetSignal('jtag_inv').eq(ResetSignal("jtag"))
+        self.comb += ResetSignal("jtag_inv").eq(ResetSignal("jtag"))
 
         # connect the TAP state signals that LiteX expects but the HW IP doesn't provide
         self.submodules.tap_fsm = JTAGTAPFSM(tms, tck)
@@ -154,10 +152,10 @@ class AlteraJTAG(Module):
 
         # connect magical reserved signals to top level pads
         self.comb += [
-            rtms.eq(reserved_pads['altera_reserved_tms']),
-            rtck.eq(reserved_pads['altera_reserved_tck']),
-            rtdi.eq(reserved_pads['altera_reserved_tdi']),
-            reserved_pads['altera_reserved_tdo'].eq(rtdo),
+            rtms.eq(reserved_pads["altera_reserved_tms"]),
+            rtck.eq(reserved_pads["altera_reserved_tck"]),
+            rtdi.eq(reserved_pads["altera_reserved_tdi"]),
+            reserved_pads["altera_reserved_tdo"].eq(rtdo),
         ]
 
         # connect TAP IO

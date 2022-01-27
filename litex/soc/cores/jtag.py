@@ -86,7 +86,7 @@ class JTAGTAPFSM(Module):
 # Altera JTAG --------------------------------------------------------------------------------------
 
 class AlteraJTAG(Module):
-    def __init__(self, primitive: str, reserved_pads: Record, chain=1):
+    def __init__(self, primitive, reserved_pads):
         # Common with Xilinx
         self.reset   = reset   = Signal() # provided by our own TAP FSM
         self.capture = capture = Signal() # provided by our own TAP FSM
@@ -115,8 +115,6 @@ class AlteraJTAG(Module):
         self.tmsutap = tmsutap = Signal()
         self.tckutap = tckutap = Signal()
         self.tdiutap = tdiutap = Signal()
-
-        assert chain == 1
 
         # # #
 
@@ -166,11 +164,11 @@ class AlteraJTAG(Module):
         self.sync.jtag_inv += tdouser.eq(tdo)
 
 class MAX10JTAG(AlteraJTAG):
-    def __init__(self, reserved_pads: Record, *args, **kwargs):
+    def __init__(self, reserved_pads, *args, **kwargs):
         AlteraJTAG.__init__(self, "fiftyfivenm_jtag", reserved_pads, *args, **kwargs)
 
 class Cyclone10LPJTAG(AlteraJTAG):
-    def __init__(self, reserved_pads: Record, *args, **kwargs):
+    def __init__(self, reserved_pads, *args, **kwargs):
         AlteraJTAG.__init__(self, "cyclone10lp_jtag", reserved_pads, *args, **kwargs)
 
 # Altera Atlantic JTAG -----------------------------------------------------------------------------
@@ -341,11 +339,11 @@ class JTAGPHY(Module):
             elif device[:3].lower() in ["10m"]:
                 assert platform is not None
                 platform.add_reserved_jtag_decls()
-                jtag = MAX10JTAG(chain=chain, reserved_pads=platform.get_reserved_jtag_pads())
+                jtag = MAX10JTAG(reserved_pads=platform.get_reserved_jtag_pads())
             elif device[:4].lower() in ["10cl"]:
                 assert platform is not None
                 platform.add_reserved_jtag_decls()
-                jtag = Cyclone10LPJTAG(chain=chain, reserved_pads=platform.get_reserved_jtag_pads())
+                jtag = Cyclone10LPJTAG(reserved_pads=platform.get_reserved_jtag_pads())
             else:
                 print(device)
                 raise NotImplementedError

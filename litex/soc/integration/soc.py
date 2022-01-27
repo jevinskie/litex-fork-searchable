@@ -1211,7 +1211,7 @@ class LiteXSoC(SoC):
             # Run JTAG-UART in sys_jtag clk domain similar to sys clk domain but without sys_rst.
             self.clock_domains.cd_sys_jtag = ClockDomain()
             self.comb += self.cd_sys_jtag.clk.eq(ClockSignal("sys"))
-            uart_phy = JTAGPHY(device=self.platform.device, clock_domain="sys_jtag")
+            uart_phy = JTAGPHY(device=self.platform.device, clock_domain="sys_jtag", platform=self.platform)
             uart     = UART(uart_phy, **uart_kwargs)
 
         # Sim.

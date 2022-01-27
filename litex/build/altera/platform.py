@@ -7,8 +7,6 @@
 
 import os
 
-from migen.genlib.record import Record
-
 from litex.build.generic_platform import GenericPlatform, Pins
 from litex.build.altera import common, quartus
 

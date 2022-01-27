@@ -19,7 +19,6 @@ setup(
         "pyserial",
         "requests",
         "pythondata-software-compiler_rt",
-        "wrapt",
     ],
     packages=find_packages(exclude=("test*", "sim*", "doc*")),
     include_package_data=True,

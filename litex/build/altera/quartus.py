@@ -47,13 +47,12 @@ def _format_qsf_constraint(signame, pin, others, resname):
     return '\n'.join(fmt_c)
 
 def _is_virtual_pin(pin_name):
-    virtual_pins = (
+    return pin_name in (
         "altera_reserved_tms",
         "altera_reserved_tck",
         "altera_reserved_tdi",
         "altera_reserved_tdo",
     )
-    return pin_name in virtual_pins
 
 def _build_qsf_constraints(named_sc, named_pc):
     qsf = []

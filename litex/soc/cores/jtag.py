@@ -12,15 +12,14 @@
 from migen import *
 from migen.genlib.cdc import AsyncResetSynchronizer, MultiReg
 
+from litex.gen.fhdl.fsm import CorrectedResetFSM
 from litex.soc.interconnect import stream
-# for TAP FSM's enhanced reset logic
-import litex.gen.fhdl.migen_addons
 
 # JTAG TAP FSM -------------------------------------------------------------------------------------
 
 class JTAGTAPFSM(Module):
     def __init__(self, tms: Signal, tck: Signal, expose_signals=True):
-        self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(FSM(reset_state="test_logic_reset"))
+        self.submodules.fsm = fsm = ClockDomainsRenamer("jtag")(CorrectedResetFSM())
 
         fsm.act("test_logic_reset",
             If(~tms, NextState("run_test_idle"))

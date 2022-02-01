@@ -43,7 +43,7 @@ class OpenOCD(GenericProgrammer):
         # On ECP5, force IR to 0x32.
         cfg_str = open(config).read()
         ecp5 = "ecp5" in cfg_str
-        altera = "10m50" in cfg_str # TODO: or cyclone 10
+        altera = "10m50" in cfg_str or "arria v" in cfg_str.lower() # TODO: or cyclone 10
         if ecp5:
             chain = 0x32
         elif altera:

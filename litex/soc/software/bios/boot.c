@@ -532,11 +532,16 @@ static void netboot_from_json(const char * filename, unsigned int ip, unsigned s
 
 static void netboot_from_bin(const char * filename, unsigned int ip, unsigned short tftp_port)
 {
+#if defined(MAIN_RAM_BASE)
+
 	int size;
 	size = copy_file_from_tftp_to_ram(ip, tftp_port, filename, (void *)MAIN_RAM_BASE);
 	if (size <= 0)
 		return;
 	boot(0, 0, 0, MAIN_RAM_BASE);
+#else
+	printf("netboot_from_bin() is unimplemented\n");
+#endif
 }
 
 void netboot(int nb_params, char **params)

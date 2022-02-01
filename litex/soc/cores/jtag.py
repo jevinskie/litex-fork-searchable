@@ -165,11 +165,15 @@ class AlteraJTAG(Module):
 
 class MAX10JTAG(AlteraJTAG):
     def __init__(self, reserved_pads, *args, **kwargs):
-        AlteraJTAG.__init__(self, "fiftyfivenm_jtag", reserved_pads, *args, **kwargs)
+        super().__init__("fiftyfivenm_jtag", reserved_pads, *args, **kwargs)
 
 class Cyclone10LPJTAG(AlteraJTAG):
     def __init__(self, reserved_pads, *args, **kwargs):
-        AlteraJTAG.__init__(self, "cyclone10lp_jtag", reserved_pads, *args, **kwargs)
+        super().__init__("cyclone10lp_jtag", reserved_pads, *args, **kwargs)
+
+class ArriaVJTAG(AlteraJTAG):
+    def __init__(self, reserved_pads, *args, **kwargs):
+        super().__init__("arriav_jtag", reserved_pads, *args, **kwargs)
 
 # Altera Atlantic JTAG -----------------------------------------------------------------------------
 
@@ -233,17 +237,17 @@ class XilinxJTAG(Module):
 
 class S6JTAG(XilinxJTAG):
     def __init__(self, *args, **kwargs):
-        XilinxJTAG.__init__(self, primitive="BSCAN_SPARTAN6", *args, **kwargs)
+        super().__init__(primitive="BSCAN_SPARTAN6", *args, **kwargs)
 
 
 class S7JTAG(XilinxJTAG):
     def __init__(self, *args, **kwargs):
-        XilinxJTAG.__init__(self, primitive="BSCANE2", *args, **kwargs)
+        super().__init__(primitive="BSCANE2", *args, **kwargs)
 
 
 class USJTAG(XilinxJTAG):
     def __init__(self, *args, **kwargs):
-        XilinxJTAG.__init__(self, primitive="BSCANE2", *args, **kwargs)
+        super().__init__(primitive="BSCANE2", *args, **kwargs)
 
 # ECP5 JTAG ----------------------------------------------------------------------------------------
 
@@ -339,11 +343,15 @@ class JTAGPHY(Module):
             elif device[:3].lower() in ["10m"]:
                 assert platform is not None
                 platform.add_reserved_jtag_decls()
-                jtag = MAX10JTAG(reserved_pads=platform.get_reserved_jtag_pads())
+                jtag = MAX10JTAG(platform.get_reserved_jtag_pads())
             elif device[:4].lower() in ["10cl"]:
                 assert platform is not None
                 platform.add_reserved_jtag_decls()
-                jtag = Cyclone10LPJTAG(reserved_pads=platform.get_reserved_jtag_pads())
+                jtag = Cyclone10LPJTAG(platform.get_reserved_jtag_pads())
+            elif device[:4].lower() in ["5agx", "5agt", "5agz", "5asx", "5ast"]:
+                assert platform is not None
+                platform.add_reserved_jtag_decls()
+                jtag = ArriaVJTAG(platform.get_reserved_jtag_pads())
             else:
                 print(device)
                 raise NotImplementedError

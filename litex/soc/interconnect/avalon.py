@@ -69,9 +69,9 @@ _avmm_layout = [
 ]
 
 class AvalonMMInterface(Record):
-    def __init__(self, data_width=32, adr_width=30):
-        self.data_width    = data_width
-        self.adr_width = adr_width
+    def __init__(self, data_width=32, adr_width=32):
+        self.data_width = data_width
+        self.adr_width  = adr_width
         assert data_width % 8 == 0
         Record.__init__(self, set_layout_parameters(_avmm_layout,
             adr_width  = adr_width,

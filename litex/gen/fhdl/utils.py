@@ -6,20 +6,28 @@
 
 from migen.genlib.record import Record
 from migen.fhdl.module import Module
-from migen.fhdl.structure import Signal
+from migen.fhdl.structure import Signal, Cat
 
 def get_signals(obj, recurse=False):
     signals = set()
+
+    def add_obj(obj):
+        if isinstance(obj, Signal):
+            signals.add(obj)
+        elif isinstance(obj, Record):
+            for robj in obj.flatten():
+                if isinstance(robj, Signal):
+                    signals.add(robj)
+        elif isinstance(obj, Cat):
+            for cobj in obj.l:
+                assert isinstance(cobj, Signal)
+                signals.add(cobj)
+
+    add_obj(obj)
     for attr_name in dir(obj):
         if attr_name[:2] == "__" and attr_name[-2:] == "__":
             continue
-        attr = getattr(obj, attr_name)
-        if isinstance(attr, Signal):
-            signals.add(attr)
-        elif isinstance(attr, Record):
-            for robj in attr.flatten():
-                if isinstance(robj, Signal):
-                    signals.add(robj)
+        add_obj(getattr(obj, attr_name))
     if recurse:
         if isinstance(obj, Module):
             for submod_name, submod in obj._submodules:

@@ -124,8 +124,14 @@ def _build_qsf(device, ips, sources, vincpaths, named_sc, named_pc, build_name, 
 
     # Add ips
     for filename in ips:
-        tpl = "set_global_assignment -name QSYS_FILE {filename}"
-        qsf.append(tpl.format(filename=filename.replace("\\", "/")))
+        if filename.endswith(".qsys"):
+            assignment_name = "QSYS_FILE"
+        elif filename.endswith(".qip"):
+            assignment_name = "QIP_FILE"
+        else:
+            raise ValueError(f"Unknown entension (not .qsys or .qip) in '{filename}'")
+        tpl = "set_global_assignment -name {name} {filename}"
+        qsf.append(tpl.format(name=assignment_name, filename=filename.replace("\\", "/")))
 
     # Add include paths
     for path in vincpaths:

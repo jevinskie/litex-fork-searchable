@@ -82,6 +82,7 @@ class AvalonMMInterface(Record):
         self.readdata.reset_less   = True
         self.byteenable.reset_less = True
         self.response.reset_less   = True
+        self.waitrequest.reset = 1
 
 
 class AvalonMM2Wishbone(Module):
@@ -89,9 +90,8 @@ class AvalonMM2Wishbone(Module):
     def __init__(self, avalon_mm, wishbone):
         av = avalon_mm
         wb = wishbone
-        wishbone_adr_shift = log2_int(av.data_width // 8)
         assert av.data_width == wb.data_width
-        assert av.adr_width == wb.adr_width + wishbone_adr_shift
+        assert av.adr_width == wb.adr_width
 
         self.comb += [
             av.address.eq(wb.adr),
@@ -100,7 +100,7 @@ class AvalonMM2Wishbone(Module):
             av.byteenable.eq(wb.sel),
             av.write.eq(wb.cyc & wb.we),
             av.read.eq(wb.cyc & ~wb.we),
-            av.chipselect.eq(wb.stb),
+            av.chipselect.eq(wb.stb & wb.cyc),
             wb.ack.eq(~av.waitrequest),
             wb.err.eq(av.response != 0),
         ]

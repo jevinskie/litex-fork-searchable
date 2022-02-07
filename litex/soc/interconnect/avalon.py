@@ -81,7 +81,6 @@ class AvalonMMInterface(Record):
         self.writedata.reset_less  = True
         self.readdata.reset_less   = True
         self.byteenable.reset_less = True
-        self.waitrequest.reset = 1
 
 
 class AvalonMM2Wishbone(Module):
@@ -97,9 +96,9 @@ class AvalonMM2Wishbone(Module):
             av.writedata.eq(wb.dat_w),
             wb.dat_r.eq(av.readdata),
             av.byteenable.eq(wb.sel),
-            av.write.eq(wb.cyc & wb.we),
-            av.read.eq(wb.cyc & ~wb.we),
+            av.write.eq(wb.stb & wb.cyc & wb.we),
+            av.read.eq(wb.stb & wb.cyc & ~wb.we),
             av.chipselect.eq(wb.stb & wb.cyc),
-            wb.ack.eq(~av.waitrequest),
+            wb.ack.eq(wb.stb & wb.cyc & ~av.waitrequest),
             wb.err.eq(av.response != 0),
         ]

@@ -218,11 +218,11 @@ static void doit_handler(int nb_params, char **params)
 
     sim_trace(1);
     uint32_t r1 = *p;
-//    *p = 0xDEADBEEF;
+    // *p = 0xDEADBEEF;
     *p = 0xff;
     uint32_t r2 = *p;
     sim_trace(0);
-    printf("r1: 0x%08lx r2: 0x%08lx\n", r1, r2);
+    printf("\nread 1: 0x%08lx read2: 0x%08lx\n", r1, r2);
 }
 
 define_command(doit, doit_handler, "testing 123", SYSTEM_CMDS);

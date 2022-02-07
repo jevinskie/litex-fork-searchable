@@ -81,7 +81,6 @@ class AvalonMMInterface(Record):
         self.writedata.reset_less  = True
         self.readdata.reset_less   = True
         self.byteenable.reset_less = True
-        self.response.reset_less   = True
         self.waitrequest.reset = 1
 
 

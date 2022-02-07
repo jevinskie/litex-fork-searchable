@@ -61,7 +61,10 @@ class RemoteClient(EtherboneIPC, CSRBuilder):
         self.send_packet(self.socket, packet)
 
         # Receive response
-        packet = EtherbonePacket(self.receive_packet(self.socket))
+        packet_buf = self.receive_packet(self.socket)
+        if packet_buf == 0:
+            raise TimeoutError
+        packet = EtherbonePacket(packet_buf)
         packet.decode()
         datas = packet.records.pop().writes.get_datas()
         if self.debug:

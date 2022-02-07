@@ -94,11 +94,14 @@ class AvalonMM2Wishbone(Module):
         self.comb += [
             av.address.eq(wb.adr),
             av.writedata.eq(wb.dat_w),
-            wb.dat_r.eq(av.readdata),
             av.byteenable.eq(wb.sel),
-            av.write.eq(wb.stb & wb.cyc & wb.we),
-            av.read.eq(wb.stb & wb.cyc & ~wb.we),
-            av.chipselect.eq(wb.stb & wb.cyc),
-            wb.ack.eq(wb.stb & wb.cyc & ~av.waitrequest),
-            wb.err.eq(av.response != 0),
+            av.write.eq(wb.cyc & wb.we),
+            av.read.eq(wb.cyc & ~wb.we),
+            av.chipselect.eq(wb.cyc & wb.stb),
+        ]
+
+        self.sync += [
+            wb.dat_r.eq(av.readdata),
+            wb.ack.eq(wb.cyc & ~av.waitrequest),
+            wb.err.eq(wb.cyc & (av.response != 0)),
         ]

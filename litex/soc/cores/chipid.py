@@ -15,6 +15,10 @@ class AlteraChipID(Module, AutoCSR):
     def __init__(self):
         self.shiftnld = CSRStorage()
         self.regout   = CSRStatus()
+        self.chip_id  = CSRStatus(64)
+        self.valid    = CSRStatus()
+
+
 
         self.specials += Instance("fiftyfivenm_chipidblock", "chipid",
             i_clk      = ClockSignal("sys"),
@@ -22,6 +26,7 @@ class AlteraChipID(Module, AutoCSR):
             o_regout   = self.regout.status,
         )
 
+# DELETE BEFORE MERGE
 class AlteraChipIDIP(Module, AutoCSR):
     def __init__(self, platform):
         self.reset = CSRStorage()

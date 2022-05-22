@@ -20,9 +20,10 @@ def get_signals(obj, recurse=False):
             for robj in attr.flatten():
                 if isinstance(robj, Signal):
                     signals.add(robj)
-    if recurse:
-        if isinstance(obj, Module):
-            for submod_name, submod in obj._submodules:
-                signals |= get_signals(submod, recurse=True)
+        elif recurse and isinstance(attr, Module):
+            signals |= get_signals(attr, recurse=True)
+    if recurse and isinstance(obj, Module):
+        for submod_name, submod in obj._submodules:
+            signals |= get_signals(submod, recurse=True)
 
     return signals

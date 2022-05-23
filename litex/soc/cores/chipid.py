@@ -45,6 +45,27 @@ class AlteraChipID(Module, AutoCSR):
             o_regout   = regout,
         )
 
+    @staticmethod
+    def get_primitive(device):
+        prim_dict = {
+            # Primitive Name                Device (startswith)
+            "arriavgz_chipidblock"        : ["5agz"],
+            "arriav_chipidblock"          : ["5agt", "5agx", "5ast", "5asx"],
+            "cyclonev_chipidblock"        : ["5c"],
+            "fiftyfivenm_chipidblock"     : ["10m"],
+            # TODO
+            "stratixv_chipidblock"        : [],
+        }
+        for prim, prim_devs in prim_dict.items():
+            for prim_dev in prim_devs:
+                if device.lower().startswith(prim_dev):
+                    return prim
+        return None
+
+
+class ChipID(Module):
+    pass
+
 
 # For verification, delete before merge
 class AlteraChipIDIP(Module, AutoCSR):

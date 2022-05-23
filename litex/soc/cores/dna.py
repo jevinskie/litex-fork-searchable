@@ -14,8 +14,8 @@ from litex.soc.interconnect.csr import *
 class DNA(Module, AutoCSR):
     def __init__(self):
         n = 57
-        self.chip_id = CSRStatus(n)
-        self.valid   = CSRStatus()
+        self.chip_id = CSRStatus(n, read_only=True)
+        self.valid   = CSRStatus(read_only=True)
 
         # # #
 
@@ -25,7 +25,7 @@ class DNA(Module, AutoCSR):
 
         self.comb += clk.eq(count[0])
         self.specials += Instance("DNA_PORT", "chipid",
-                i_DIN   = self.chipid_id.status[-1],
+                i_DIN   = self.chip_id.status[-1],
                 o_DOUT  = do,
                 i_CLK   = clk,
                 i_READ  = count < 2,

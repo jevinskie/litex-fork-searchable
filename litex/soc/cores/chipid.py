@@ -17,16 +17,16 @@ from litex.soc.integration.soc import colorer
 logging.basicConfig(level=logging.INFO)
 
 class AlteraChipID(Module, AutoCSR):
-    def __init__(self, primitive):
+    def __init__(self, primitive, cd="sys"):
         self.chip_id  = CSRStatus(64, read_only=True)
         self.valid    = CSRStatus(read_only=True)
         regout        = Signal()
         shiftnld      = Signal()
         done          = Signal()
 
-        if ClockFrequency() > 100e6:
+        if ClockFrequency(cd) > 100e6:
             logging.warn(f"Altera Chip ID block should be clocked {colorer('<= 100 MHz')}, not " +
-                colorer(f"{ClockFrequency()/1e6:.0f} MHz")
+                colorer(f"{ClockFrequency(cd)/1e6:.0f} MHz")
             )
 
         n_cycles      = 65
@@ -39,18 +39,23 @@ class AlteraChipID(Module, AutoCSR):
             shiftnld.eq(~done & (count != count.reset))
         ]
 
-        self.sync += [
-            If(~done,
-                count.eq(count - 1)
-            ),
-            # shift in the chip ID
-            If(shiftnld,
-                self.chip_id.status.eq(Cat(self.chip_id.status[1:], regout))
-            )
-        ]
+        class ChipIDCDMod(Module):
+            def __init__(self, done, count, chip_id, regout):
+                self.sync += [
+                    If(~done,
+                        count.eq(count - 1)
+                    ),
+                    # shift in the chip ID
+                    If(shiftnld,
+                        chip_id.status.eq(Cat(chip_id.status[1:], regout))
+                    )
+                ]
+
+        chipid_cd_mod = ChipIDCDMod(done, count, self.chip_id, regout)
+        self.submodules.chipid_cd_mod = ClockDomainsRenamer(cd)(chipid_cd_mod)
 
         self.specials += Instance(primitive, "chipid",
-            i_clk      = ClockSignal(),
+            i_clk      = ClockSignal(cd),
             i_shiftnld = shiftnld,
             o_regout   = regout,
         )
@@ -73,11 +78,12 @@ class AlteraChipID(Module, AutoCSR):
         return None
 
 
-def get_chipid_module(platform):
+def get_chipid_module(platform, cd="sys"):
     alt_prim = AlteraChipID.get_primitive(platform.device)
     if alt_prim:
-        return AlteraChipID(alt_prim)
+        return AlteraChipID(alt_prim, cd=cd)
     if platform.device[:2] == "xc":
+        assert cd == "sys"
         return DNA()
     raise NotImplementedError
 

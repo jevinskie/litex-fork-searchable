@@ -17,21 +17,28 @@ class AlteraChipID(Module, AutoCSR):
         self.chip_id  = CSRStatus(64)
         self.valid    = CSRStatus()
         self.go       = CSRStorage()
+        self.shiftnld = Signal()
+        self.done     = Signal()
+        self.wait     = Signal()
 
         self.submodules.valid_timer = WaitTimer(64)
 
-        self.sync += If(~self.valid_timer.done,
+        self.sync += If(self.shiftnld,
             self.chip_id.status.eq(Cat(self.chip_id.status[1:], self.regout.status))
         )
 
         self.comb += [
+            self.valid_timer.wait.eq(0),
+            self.done.eq(self.valid_timer.done),
+            self.wait.eq(self.valid_timer.wait),
             self.valid.status.eq(self.valid_timer.done),
             self.valid_timer.wait.eq(self.go.storage),
+            self.shiftnld.eq(~self.valid_timer.done & self.valid_timer.wait),
         ]
 
         self.specials += Instance("fiftyfivenm_chipidblock", "chipid",
             i_clk      = ClockSignal("sys"),
-            i_shiftnld = self.go.storage,
+            i_shiftnld = self.shiftnld,
             o_regout   = self.regout.status,
         )
 

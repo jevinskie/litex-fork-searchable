@@ -12,7 +12,12 @@ from litex.soc.interconnect.csr import *
 
 
 class AlteraChipID(Module, AutoCSR):
-    def __init__(self):
+    def __new__(cls, *args, **kwargs):
+        print("newing AlteraChipID")
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, primitive):
+        print(f"AlteraChipID: prim: {primitive}")
         self.chip_id  = CSRStatus(64, read_only=True)
         self.valid    = CSRStatus(read_only=True)
         regout        = Signal()
@@ -39,7 +44,7 @@ class AlteraChipID(Module, AutoCSR):
             )
         ]
 
-        self.specials += Instance("fiftyfivenm_chipidblock", "chipid",
+        self.specials += Instance(primitive, "chipid",
             i_clk      = ClockSignal("sys"),
             i_shiftnld = shiftnld,
             o_regout   = regout,
@@ -64,7 +69,20 @@ class AlteraChipID(Module, AutoCSR):
 
 
 class ChipID(Module):
-    pass
+    def __new__(cls, platform):
+        alt_prim = AlteraChipID.get_primitive(platform.device)
+        print(f"altprint: {alt_prim}")
+        if alt_prim:
+            print("super newing")
+            obj = AlteraChipID.__new__(AlteraChipID)
+            obj.__init__(alt_prim)
+            return obj
+        else:
+            raise NotImplementedError
+
+    def __init__(self, *args, **kwargs):
+        print("ChipID __init__")
+        super().__init__(*args, **kwargs)
 
 
 # For verification, delete before merge

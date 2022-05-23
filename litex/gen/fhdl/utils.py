@@ -22,8 +22,5 @@ def get_signals(obj, recurse=False):
                     signals.add(robj)
         elif recurse and isinstance(attr, Module):
             signals |= get_signals(attr, recurse=True)
-    if recurse and isinstance(obj, Module):
-        for submod_name, submod in obj._submodules:
-            signals |= get_signals(submod, recurse=True)
 
     return signals

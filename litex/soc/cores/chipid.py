@@ -13,20 +13,29 @@ from litex.soc.interconnect.csr import *
 
 class AlteraChipID(Module, AutoCSR):
     def __init__(self):
-        self.shiftnld = CSRStorage()
         self.regout   = CSRStatus()
         self.chip_id  = CSRStatus(64)
         self.valid    = CSRStatus()
+        self.go       = CSRStorage()
 
+        self.submodules.valid_timer = WaitTimer(64)
 
+        self.sync += If(~self.valid_timer.done,
+            self.chip_id.status.eq(Cat(self.chip_id.status[1:], self.regout.status))
+        )
+
+        self.comb += [
+            self.valid.status.eq(self.valid_timer.done),
+            self.valid_timer.wait.eq(self.go.storage),
+        ]
 
         self.specials += Instance("fiftyfivenm_chipidblock", "chipid",
             i_clk      = ClockSignal("sys"),
-            i_shiftnld = self.shiftnld.storage,
+            i_shiftnld = self.go.storage,
             o_regout   = self.regout.status,
         )
 
-# DELETE BEFORE MERGE
+# For verification, delete before merge
 class AlteraChipIDIP(Module, AutoCSR):
     def __init__(self, platform):
         self.reset = CSRStorage()

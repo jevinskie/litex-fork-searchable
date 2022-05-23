@@ -13,44 +13,50 @@ from litex.soc.interconnect.csr import *
 
 class AlteraChipID(Module, AutoCSR):
     def __init__(self):
-        self.regout   = Signal()
         self.chip_id  = CSRStatus(64, read_only=True)
-        self.valid    = CSRStatus()
-        self.shiftnld = Signal()
-        self.done     = Signal()
+        self.valid    = CSRStatus(read_only=True)
+        regout        = Signal()
+        shiftnld      = Signal()
+        done          = Signal()
 
-        n_cycles = 65
-        self.count = count = Signal(bits_for(n_cycles), reset=n_cycles)
-        self.comb += self.done.eq(count == 0)
-        self.sync += If(~self.done, count.eq(count - 1))
-
-        self.sync += If(self.shiftnld,
-            self.chip_id.status.eq(Cat(self.chip_id.status[1:], self.regout))
-        )
+        n_cycles      = 65
+        count         = Signal(bits_for(n_cycles), reset=n_cycles)
 
         self.comb += [
-            self.valid.status.eq(self.done),
+            done.eq(count == 0),
+            self.valid.status.eq(done),
             # must pulse shiftnld low at least one cycle
-            self.shiftnld.eq(~self.done & (self.count != self.count.reset))
+            shiftnld.eq(~done & (count != count.reset))
+        ]
+
+        self.sync += [
+            If(~done,
+                count.eq(count - 1)
+            ),
+            # shift in the chip ID
+            If(shiftnld,
+                self.chip_id.status.eq(Cat(self.chip_id.status[1:], regout))
+            )
         ]
 
         self.specials += Instance("fiftyfivenm_chipidblock", "chipid",
             i_clk      = ClockSignal("sys"),
-            i_shiftnld = self.shiftnld,
-            o_regout   = self.regout,
+            i_shiftnld = shiftnld,
+            o_regout   = regout,
         )
+
 
 # For verification, delete before merge
 class AlteraChipIDIP(Module, AutoCSR):
     def __init__(self, platform):
         self.chip_id = CSRStatus(64, read_only=True)
-        self.valid   = CSRStatus()
+        self.valid   = CSRStatus(read_only=True)
 
         self.specials += Instance("altchip_id", "chipid",
-            i_clkin      = ClockSignal("sys"),
-            i_reset      = ResetSignal("sys"),
-            o_data_valid = self.valid.status,
-            o_chip_id    = self.chip_id.status,
+            i_clkin         = ClockSignal("sys"),
+            i_reset         = ResetSignal("sys"),
+            o_chip_id       = self.chip_id.status,
+            o_data_valid    = self.valid.status,
             p_DEVICE_FAMILY = "MAX 10"
         )
 

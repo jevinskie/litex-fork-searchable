@@ -4,11 +4,16 @@
 # Copyright (c) 2022 Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import logging
 import os
 
 from migen import *
-from litex.soc.interconnect.csr import *
 
+from litex.soc.cores.clock.common import *
+from litex.soc.interconnect.csr import *
+from litex.soc.integration.soc import colorer
+
+logging.basicConfig(level=logging.INFO)
 
 class AlteraChipID(Module, AutoCSR):
     def __init__(self, primitive):
@@ -17,6 +22,11 @@ class AlteraChipID(Module, AutoCSR):
         regout        = Signal()
         shiftnld      = Signal()
         done          = Signal()
+
+        if ClockFrequency() > 100e6:
+            logging.warn(f"Altera Chip ID block should be clocked {colorer('<= 100 MHz')}, not " +
+                colorer(f"{ClockFrequency()/1e6:.0f} MHz")
+            )
 
         n_cycles      = 65
         count         = Signal(bits_for(n_cycles), reset=n_cycles)

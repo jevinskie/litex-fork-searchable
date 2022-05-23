@@ -7,13 +7,11 @@
 import os
 
 from migen import *
-from migen.genlib.misc import WaitTimer
 from litex.soc.interconnect.csr import *
 
 
 class AlteraChipID(Module, AutoCSR):
     def __init__(self, primitive):
-        print(f"AlteraChipID: prim: {primitive}")
         self.chip_id  = CSRStatus(64, read_only=True)
         self.valid    = CSRStatus(read_only=True)
         regout        = Signal()
@@ -41,7 +39,7 @@ class AlteraChipID(Module, AutoCSR):
         ]
 
         self.specials += Instance(primitive, "chipid",
-            i_clk      = ClockSignal("sys"),
+            i_clk      = ClockSignal(),
             i_shiftnld = shiftnld,
             o_regout   = regout,
         )
@@ -78,8 +76,8 @@ class AlteraChipIDIP(Module, AutoCSR):
         self.valid   = CSRStatus(read_only=True)
 
         self.specials += Instance("altchip_id", "chipid",
-            i_clkin         = ClockSignal("sys"),
-            i_reset         = ResetSignal("sys"),
+            i_clkin         = ClockSignal(),
+            i_reset         = ResetSignal(),
             o_chip_id       = self.chip_id.status,
             o_data_valid    = self.valid.status,
             p_DEVICE_FAMILY = "MAX 10"

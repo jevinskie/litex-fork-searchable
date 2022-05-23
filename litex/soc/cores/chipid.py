@@ -9,8 +9,9 @@ import os
 
 from migen import *
 
-from litex.soc.cores.clock.common import *
-from litex.soc.interconnect.csr import *
+from litex.soc.cores.clock.common import ClockFrequency
+from litex.soc.cores.dna import DNA
+from litex.soc.interconnect.csr import AutoCSR, CSRStatus, CSRStorage
 from litex.soc.integration.soc import colorer
 
 logging.basicConfig(level=logging.INFO)
@@ -76,6 +77,8 @@ def get_chipid_module(platform):
     alt_prim = AlteraChipID.get_primitive(platform.device)
     if alt_prim:
         return AlteraChipID(alt_prim)
+    if platform.device[:2] == "xc":
+        return DNA()
     raise NotImplementedError
 
 

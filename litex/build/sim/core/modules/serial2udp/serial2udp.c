@@ -1,10 +1,3 @@
-//
-// This file is part of LiteX.
-//
-// Copyright (c) 2022 Jevin Sweval <jevinsweval@gmail.com>
-// SPDX-License-Identifier: BSD-2-Clause
-
-#undef NDEBUG
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,8 +174,11 @@ static int serial2udp_new(void **sess, char *args)
     } else {
       goto out;
     }
+  } else {
+    printf("Found bind IP %s\n", cbind_ip);
   }
 
+  printf("Found port %s\n", cport);
   sscanf(cport, "%d", &port);
   free(cport);
   if(!port) {
@@ -218,14 +214,12 @@ static int serial2udp_new(void **sess, char *args)
     ret = RC_OK;
   }
 
-  printf("serial2udp: IP: %s port: %d\n", cbind_ip, port);
-
   if (bind(s->sock, (const struct sockaddr *) &sin, sizeof(sin))) {
     perror("serial2udp: bind()");
+    eprintf("serial2udp: IP: %s port: %d\n", cbind_ip, port);
     ret = RC_ERROR;
     goto out;
   }
-
 
   s->ev = event_new(base, s->sock, EV_READ | EV_PERSIST, event_handler, s);
   event_add(s->ev, &tv_sock_read_timeout);
@@ -238,33 +232,22 @@ out:
 static int serial2udp_add_pads(void *sess, struct pad_list_s *plist)
 {
   int ret = RC_OK;
-  struct session_s *s = (struct session_s*)sess;
+  struct session_s *s=(struct session_s*)sess;
   struct pad_s *pads;
   if(!sess || !plist) {
     ret = RC_INVARG;
     goto out;
   }
   pads = plist->pads;
-  if(!strcmp(plist->name, "serial_udp") || !strcmp(plist->name, "serial2spi_udp") ||
-     !strcmp(plist->name, "serial2usb_udp")) {
+  if(!strcmp(plist->name, "serial_udp")) {
     litex_sim_module_pads_get(pads, "sink_data", (void**)&s->rx);
-    assert(s->rx);
     litex_sim_module_pads_get(pads, "sink_valid", (void**)&s->rx_valid);
-    assert(s->rx_valid);
     litex_sim_module_pads_get(pads, "sink_ready", (void**)&s->rx_ready);
-    assert(s->rx_ready);
-
-    litex_sim_module_pads_get(pads, "source_data", (void**)&s->tx);
-    assert(s->tx);
-    litex_sim_module_pads_get(pads, "source_valid", (void**)&s->tx_valid);
-    assert(s->tx_valid);
-    litex_sim_module_pads_get(pads, "source_ready", (void**)&s->tx_ready);
-    assert(s->tx_ready);
-
-    // optional
     litex_sim_module_pads_get(pads, "sink_first", (void**)&s->rx_first);
     litex_sim_module_pads_get(pads, "sink_last", (void**)&s->rx_last);
-
+    litex_sim_module_pads_get(pads, "source_data", (void**)&s->tx);
+    litex_sim_module_pads_get(pads, "source_valid", (void**)&s->tx_valid);
+    litex_sim_module_pads_get(pads, "source_ready", (void**)&s->tx_ready);
     litex_sim_module_pads_get(pads, "source_first", (void**)&s->tx_first);
     litex_sim_module_pads_get(pads, "source_last", (void**)&s->tx_last);
   }
@@ -274,52 +257,8 @@ static int serial2udp_add_pads(void *sess, struct pad_list_s *plist)
 
 out:
   return ret;
-}
 
-static int tx_is_first(struct session_s *s) {
-  static int prev_tx_valid = 0;
-  int res;
-  if (s->tx_first) {
-    res = *s->tx_first;
-  } else {
-    res = !prev_tx_valid && *s->tx_valid;
-  }
-  prev_tx_valid = *s->tx_valid;
-  return res;
 }
-
-static int tx_is_last(struct session_s *s) {
-  if (s->tx_last)
-    return *s->tx_last;
-  return 0;
-}
-
-static int tx_is_prev_cycle_last(struct session_s *s) {
-  static int prev_tx_valid = 0;
-  static int prev_tx_last = 0;
-  int res;
-  if (s->tx_last) {
-    res = prev_tx_last;
-  } else {
-    res = prev_tx_valid && !*s->tx_valid;
-  }
-  prev_tx_valid = *s->tx_valid;
-  if (s->tx_last)
-    prev_tx_last = *s->tx_last;
-  return res;
-}
-
-static int tx_ticks_to_last(struct session_s *s) {
-  int last = tx_is_last(s);
-  int prev_last = tx_is_prev_cycle_last(s);
-  if (last)
-    return 0;
-  else if (prev_last)
-    return -1;
-  else
-    return 1;
-}
-
 static int serial2udp_tick(void *sess, uint64_t time_ps)
 {
   static clk_edge_state_t edge;
@@ -333,19 +272,16 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     return RC_OK;
   }
 
-
+  // printf("tx_ready: %d\n", *s->tx_ready);
   *s->tx_ready = 1;
-  if (tx_is_first(s)) {
-    eprintf("is first\n");
+  if (*s->tx_first == 1) {
     s->datalen = 0;
   }
   if(*s->tx_valid == 1) {
     c = *s->tx;
     s->databuf[s->datalen++] = c;
   }
-  int nticks = tx_ticks_to_last(s);
-  if (nticks <= 0) {
-    eprintf("pinching it off: %d", nticks);
+  if (*s->tx_last) {
     assert(s->datalen);
     eprintf("serial2udp: udp write %d\n", s->datalen);
     sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
@@ -359,15 +295,13 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
   }
 
   *s->rx_valid = 0;
-  if (s->rx_first)
-    *s->rx_first = 0;
-  if (s->rx_last)
-    *s->rx_last = 0;
+  *s->rx_first = 0;
+  *s->rx_last = 0;
   if(s->inlen) {
     eprintf("serial2udp: inlen: %d insent: %d\n", s->inlen, s->insent);
     *s->rx_valid = 1;
     *s->rx = s->inbuf[s->insent];
-    if (s->insent == 0 && s->rx_first) {
+    if (s->insent == 0) {
       *s->rx_first = 1;
     }
     if (*s->rx_ready == 1) {
@@ -376,8 +310,7 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     if(s->insent == s->inlen) {
       s->insent = 0;
       s->inlen = 0;
-      if (s->rx_last)
-        *s->rx_last = 1;
+      *s->rx_last = 1;
     }
   } else {
     if(s->udppack) {

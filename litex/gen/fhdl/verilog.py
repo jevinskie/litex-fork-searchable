@@ -136,6 +136,8 @@ _ieee_1800_2017_verilog_reserved_keywords = {
 # Print Constant -----------------------------------------------------------------------------------
 
 def _print_constant(node):
+    if getattr(node, "print_plain", False):
+        return str(node.value)
     return "{sign}{bits}'d{value}".format(
         sign  = "" if node.value >= 0 else "-",
         bits  = str(node.nbits),

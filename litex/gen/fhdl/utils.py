@@ -24,3 +24,7 @@ def get_signals(obj, recurse=False):
             signals |= get_signals(attr, recurse=True)
 
     return signals
+
+def rename_fsm(fsm, name):
+    fsm.state.backtrace.append((f"{name}_next", None))
+    fsm.next_state.backtrace.append((f"{name}_next_state", None))

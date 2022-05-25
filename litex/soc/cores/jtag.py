@@ -155,6 +155,43 @@ class JTAGTAPFSM(Module):
             }
         )
 
+
+# GPIO (Soft) JTAG ---------------------------------------------------------------------------------
+
+class GPIOJTAG(Module):
+    def __init__(self, pads):
+        self.reset   = reset   = Signal()
+        self.capture = capture = Signal()
+        self.shift   = shift   = Signal()
+        self.update  = update  = Signal()
+
+        self.tck = tck = pads.tck
+        self.tms = tms = pads.tms
+        self.tdi = tdi = pads.tdi
+        self.tdo = tdo = pads.tdo
+
+        # Create falling-edge JTAG clock domain for TAP FSM.
+        self.clock_domains.cd_jtag_inv = cd_jtag_inv = ClockDomain("jtag_inv")
+        self.comb += ClockSignal("jtag_inv").eq(~ClockSignal("jtag"))
+        self.comb += ResetSignal("jtag_inv").eq(ResetSignal("jtag"))
+
+        self.submodules.tap_fsm = ClockDomainsRenamer("jtag")(JTAGTAPFSM(tms))
+        self.sync.jtag_inv += reset.eq(self.tap_fsm.TEST_LOGIC_RESET)
+        self.sync.jtag_inv += capture.eq(self.tap_fsm.CAPTURE_DR)
+        self.sync.jtag_inv += shift.eq(self.tap_fsm.SHIFT_DR)
+        self.sync.jtag_inv += update.eq(self.tap_fsm.UPDATE_DR)
+
+        # connect magical reserved signals to top level pads
+        self.comb += [
+            rtms.eq(pads["altera_reserved_tms"]),
+            rtck.eq(pads["altera_reserved_tck"]),
+            rtdi.eq(pads["altera_reserved_tdi"]),
+            pads["altera_reserved_tdo"].eq(rtdo),
+        ]
+
+        self.sync.jtag_inv += tdouser.eq(tdo) 
+
+
 # Altera JTAG --------------------------------------------------------------------------------------
 
 class AlteraJTAG(Module):
@@ -419,6 +456,8 @@ class JTAGPHY(Module):
                     primitive = AlteraJTAG.get_primitive(device),
                     pads      = platform.get_reserved_jtag_pads()
                 )
+            elif device == "gpio":
+                jtag = GPIOJTAG(pads=platform.request("gpio_jtag"))
             else:
                 print(device)
                 raise NotImplementedError

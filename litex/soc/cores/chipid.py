@@ -16,6 +16,7 @@ from litex.soc.integration.soc import colorer
 
 logging.basicConfig(level=logging.INFO)
 
+
 class AlteraChipID(Module, AutoCSR):
     def __init__(self, primitive, cd="sys"):
         self.chip_id  = CSRStatus(64, read_only=True)

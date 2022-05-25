@@ -275,6 +275,7 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
   // printf("tx_ready: %d\n", *s->tx_ready);
   *s->tx_ready = 1;
   if (*s->tx_first == 1) {
+    eprintf("serial2udp: saw tx_first pulse\n");
     s->datalen = 0;
   }
   if(*s->tx_valid == 1) {
@@ -282,6 +283,7 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++] = c;
   }
   if (*s->tx_last) {
+    eprintf("serial2udp: saw tx_last pulse\n");
     assert(s->datalen);
     eprintf("serial2udp: udp write %d\n", s->datalen);
     sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
@@ -302,6 +304,7 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     *s->rx_valid = 1;
     *s->rx = s->inbuf[s->insent];
     if (s->insent == 0) {
+      eprintf("serial2udp: pulsing rx_first\n");
       *s->rx_first = 1;
     }
     if (*s->rx_ready == 1) {
@@ -310,6 +313,7 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
     if(s->insent == s->inlen) {
       s->insent = 0;
       s->inlen = 0;
+      eprintf("serial2udp: pulsing rx_last\n");
       *s->rx_last = 1;
     }
   } else {

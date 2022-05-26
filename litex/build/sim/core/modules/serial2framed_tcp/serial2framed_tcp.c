@@ -12,6 +12,7 @@
 #include "error.h"
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <event2/listener.h>
 #include <event2/util.h>
 #include <event2/event.h>
 
@@ -40,7 +41,7 @@ struct session_s {
   char *sys_clk;
   int sock;
   int server;
-  struct sockaddr_in client_addr;
+  struct sockaddr_in peer_addr;
   struct tcp_packet_s *tcppack;
   struct event *ev;
   char databuf[MAX_PACKET_LEN];
@@ -130,18 +131,21 @@ static int serial2framed_tcp_start(void *b)
 void read_handler(int fd, short event, void *arg)
 {
   struct session_s *s = (struct session_s *)arg;
-  struct tcp_packet_s *tp;
-  struct tcp_packet_s *ttp;
-  socklen_t client_addr_sz = sizeof(s->client_addr);
+  struct tcp_packet_s *tp, *ttp;
 
   tp = malloc(sizeof(struct tcp_packet_s));
   memset(tp, 0, sizeof(struct tcp_packet_s));
-  if(s->server)
-    tp->len = recvfrom(s->sock, &tp->data, sizeof(tp->data), 0, (struct sockaddr *)&s->client_addr, &client_addr_sz);
-  else
-    tp->len = recv(s->sock, &tp->data, sizeof(tp->data), 0);
-  if(tp->len < 0) {
-    perror("serial2framed_tcp: recv()");
+  uint32_t pkt_sz;
+  int len_field_nbytes = recv(s->sock, &pkt_sz, sizeof(uint32_t), 0);
+  if(len_field_nbytes != sizeof(uint32_t)) {
+    perror("serial2framed_tcp: recv() of frame length field");
+    event_base_loopexit(base, NULL);
+    return;
+  }
+  pkt_sz = ntohl(pkt_sz);
+  tp->len = recv(s->sock, &tp->data, pkt_sz, 0);
+  if(tp->len != pkt_sz) {
+    perror("serial2framed_tcp: recv() of frame body");
     event_base_loopexit(base, NULL);
     return;
   }
@@ -162,6 +166,24 @@ static void event_handler(int fd, short event, void *arg)
     read_handler(fd, event, arg);
 }
 
+static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *ctx)
+{
+  struct session_s *s = (struct session_s *)ctx;
+  struct timeval tv = {1, 0};
+
+  s->sock = fd;
+  s->ev = event_new(base, fd, EV_READ | EV_PERSIST, event_handler, s);
+  event_add(s->ev, &tv);
+}
+
+static void accept_error_cb(struct evconnlistener *listener, void *ctx)
+{
+  struct event_base *base = evconnlistener_get_base(listener);
+  eprintf("ERROR\n");
+
+  event_base_loopexit(base, NULL);
+}
+
 static int serial2framed_tcp_new(void **sess, char *args)
 {
   int ret = RC_OK;
@@ -170,6 +192,7 @@ static int serial2framed_tcp_new(void **sess, char *args)
   char *cbind_ip = NULL;
   char *sconnect_ip = NULL;
   int port;
+  struct evconnlistener *listener;
   struct sockaddr_in sin;
   struct timeval tv_sock_read_timeout = {10, 0};
 
@@ -185,6 +208,7 @@ static int serial2framed_tcp_new(void **sess, char *args)
   if(RC_OK != ret) {
     if(RC_JSMISSINGKEY == ret) {
       cbind_ip = "0.0.0.0";
+      ret = RC_OK;
     } else {
       goto out;
     }
@@ -194,6 +218,7 @@ static int serial2framed_tcp_new(void **sess, char *args)
   if(RC_OK != ret) {
     if(RC_JSMISSINGKEY == ret) {
       // do nothing, not connecting to a server
+      ret = RC_OK;
     } else {
       goto out;
     }
@@ -216,56 +241,46 @@ static int serial2framed_tcp_new(void **sess, char *args)
   if(!sconnect_ip)
     s->server = 1;
 
-  s->sock = socket(AF_INET, SOCK_DGRAM, 0);
-  assert(s->sock >= 0);
-
-  int optval = 1;
-  assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
-  assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
-
-  memset(&sin, 0, sizeof(sin));
   if(s->server) {
-    ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
+    int addr_ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
-    if(!ret) {
+    if(!addr_ret) {
       eprintf("Invalid bind IP ('%s') selected!\n", cbind_ip);
       ret = RC_ERROR;
       goto out;
-    } else {
-      ret = RC_OK;
     }
+    listener =
+    evconnlistener_new_bind(base, accept_conn_cb, s, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE, -1, (struct sockaddr *)&sin, sizeof(sin));
+    if(!listener) {
+      ret = RC_ERROR;
+      eprintf("Can't bind port %d\n!\n", port);
+      goto out;
+    }
+    evconnlistener_set_error_cb(listener, accept_error_cb);
   } else {
-    ret = inet_pton(AF_INET, sconnect_ip, &(sin.sin_addr));
+    s->sock = socket(AF_INET, SOCK_STREAM, 0);
+    assert(s->sock >= 0);
+    int optval = 1;
+    assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
+    assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
+    int addr_ret = inet_pton(AF_INET, sconnect_ip, &(sin.sin_addr));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(port);
-    if(!ret) {
-      eprintf("Invalid connect IP ('%s') selected!\n", cbind_ip);
-      ret = RC_ERROR;
-      goto out;
-    } else {
-      ret = RC_OK;
-    }
-  }
-
-  if(s->server) {
-    if(bind(s->sock, (const struct sockaddr *)&sin, sizeof(sin))) {
-      perror("serial2framed_tcp: bind()");
-      eprintf("serial2framed_tcp: IP: %s port: %d\n", cbind_ip, port);
+    if(!addr_ret) {
+      eprintf("Invalid connect IP ('%s') selected!\n", sconnect_ip);
       ret = RC_ERROR;
       goto out;
     }
-  } else {
     if(connect(s->sock, (const struct sockaddr *)&sin, sizeof(sin))) {
       perror("serial2framed_tcp: connect()");
-      eprintf("serial2framed_tcp: IP: %s port: %d\n", cbind_ip, port);
+      eprintf("serial2framed_tcp: IP: %s port: %d\n", sconnect_ip, port);
       ret = RC_ERROR;
       goto out;
     }
+    s->ev = event_new(base, s->sock, EV_READ | EV_PERSIST, event_handler, s);
+    event_add(s->ev, &tv_sock_read_timeout);
   }
-
-  s->ev = event_new(base, s->sock, EV_READ | EV_PERSIST, event_handler, s);
-  event_add(s->ev, &tv_sock_read_timeout);
 
 out:
   *sess = (void *)s;
@@ -361,13 +376,14 @@ static int serial2framed_tcp_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++] = c;
   }
   if(tx_is_last_or_last_plus_one(s)) {
-    assert(s->datalen);
-    if(s->server)
-      sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
-    else
-      sent_sz = send(s->sock, s->databuf, s->datalen, 0);
-    if(sent_sz < 0) {
-      perror("serial2framed_tcp: sendto()");
+    assert(s->datalen > 0); // streams can't represent zero length packet
+    char sendbuf[MAX_PACKET_LEN + sizeof(uint32_t)];
+    uint32_t net_sz = htonl(s->datalen);
+    memcpy(sendbuf, &net_sz, sizeof(uint32_t));
+    memcpy(sendbuf + sizeof(uint32_t), s->databuf, s->datalen);
+    sent_sz = send(s->sock, sendbuf, s->datalen + sizeof(uint32_t), 0);
+    if(sent_sz != s->datalen + sizeof(uint32_t)) {
+      perror("serial2framed_tcp: send()");
       event_base_loopexit(base, NULL);
       return RC_ERROR;
     }

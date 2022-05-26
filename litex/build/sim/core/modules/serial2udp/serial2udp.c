@@ -183,6 +183,7 @@ static int serial2udp_new(void **sess, char *args)
   if(RC_OK != ret) {
     if(RC_JSMISSINGKEY == ret) {
       cbind_ip = "0.0.0.0";
+      ret = RC_OK;
     } else {
       goto out;
     }
@@ -192,6 +193,7 @@ static int serial2udp_new(void **sess, char *args)
   if(RC_OK != ret) {
     if(RC_JSMISSINGKEY == ret) {
       // do nothing, not connecting to a server
+      ret = RC_OK;
     } else {
       goto out;
     }

@@ -37,6 +37,7 @@ struct session_s {
   char *rx_last;
   char *sys_clk;
   int sock;
+  int server;
   struct sockaddr_in client_addr;
   struct udp_packet_s *udppack;
   struct event *ev;
@@ -133,7 +134,10 @@ void read_handler(int fd, short event, void *arg)
 
   up = malloc(sizeof(struct udp_packet_s));
   memset(up, 0, sizeof(struct udp_packet_s));
-  up->len = recvfrom(s->sock, &up->data, sizeof(up->data), 0, (struct sockaddr *)&s->client_addr, &client_addr_sz);
+  if(s->server)
+    up->len = recvfrom(s->sock, &up->data, sizeof(up->data), 0, (struct sockaddr *)&s->client_addr, &client_addr_sz);
+  else
+    up->len = recv(s->sock, &up->data, sizeof(up->data), 0);
   if (up->len < 0) {
     perror("serial2udp: recvfrom()");
     event_base_loopexit(base, NULL);
@@ -161,6 +165,7 @@ static int serial2udp_new(void **sess, char *args)
   struct session_s *s = NULL;
   char *cport = NULL;
   char *cbind_ip = NULL;
+  char *sconnect_ip = NULL;
   int port;
   struct sockaddr_in sin;
   struct timeval tv_sock_read_timeout = {10, 0};
@@ -182,6 +187,15 @@ static int serial2udp_new(void **sess, char *args)
     }
   }
 
+  ret = litex_sim_module_get_args(args, "connect_ip", &sconnect_ip, true);
+  if(RC_OK != ret) {
+    if (RC_JSMISSINGKEY == ret) {
+      // do nothing, not connecting to a server
+    } else {
+      goto out;
+    }
+  }
+
   sscanf(cport, "%d", &port);
   free(cport);
   if(!port) {
@@ -196,6 +210,8 @@ static int serial2udp_new(void **sess, char *args)
     goto out;
   }
   memset(s, 0, sizeof(struct session_s));
+  if(!sconnect_ip)
+    s->server = 1;
 
   s->sock = socket(AF_INET, SOCK_DGRAM, 0);
   assert(s->sock >= 0);
@@ -205,23 +221,44 @@ static int serial2udp_new(void **sess, char *args)
   assert(!setsockopt(s->sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)));
 
   memset(&sin, 0, sizeof(sin));
-  ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = htonl(0);
-  sin.sin_port = htons(port);
-  if(!ret) {
-    eprintf("Invalid bind IP ('%s') selected!\n", cbind_ip);
-    ret = RC_ERROR;
-    goto out;
+  if(s->server) {
+    ret = inet_pton(AF_INET, cbind_ip, &(sin.sin_addr));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(port);
+    if(!ret) {
+      eprintf("Invalid bind IP ('%s') selected!\n", cbind_ip);
+      ret = RC_ERROR;
+      goto out;
+    } else {
+      ret = RC_OK;
+    }
   } else {
-    ret = RC_OK;
+    ret = inet_pton(AF_INET, sconnect_ip, &(sin.sin_addr));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(port);
+    if(!ret) {
+      eprintf("Invalid connect IP ('%s') selected!\n", cbind_ip);
+      ret = RC_ERROR;
+      goto out;
+    } else {
+      ret = RC_OK;
+    }
   }
 
-  if (bind(s->sock, (const struct sockaddr *) &sin, sizeof(sin))) {
-    perror("serial2udp: bind()");
-    eprintf("serial2udp: IP: %s port: %d\n", cbind_ip, port);
-    ret = RC_ERROR;
-    goto out;
+  if (s->server) {
+    if (bind(s->sock, (const struct sockaddr *) &sin, sizeof(sin))) {
+      perror("serial2udp: bind()");
+      eprintf("serial2udp: IP: %s port: %d\n", cbind_ip, port);
+      ret = RC_ERROR;
+      goto out;
+    }
+  } else {
+    if(connect(s->sock, (const struct sockaddr *) &sin, sizeof(sin))) {
+      perror("serial2udp: connect()");
+      eprintf("serial2udp: IP: %s port: %d\n", cbind_ip, port);
+      ret = RC_ERROR;
+      goto out;
+    }
   }
 
   s->ev = event_new(base, s->sock, EV_READ | EV_PERSIST, event_handler, s);
@@ -320,7 +357,10 @@ static int serial2udp_tick(void *sess, uint64_t time_ps)
   }
   if (tx_is_last_or_last_plus_one(s)) {
     assert(s->datalen);
-    sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
+    if(s->server)
+      sent_sz = sendto(s->sock, s->databuf, s->datalen, 0, (struct sockaddr *)&s->client_addr, sizeof(s->client_addr));
+    else
+      sent_sz = send(s->sock, s->databuf, s->datalen, 0);
     if (sent_sz < 0) {
       perror("serial2udp: sendto()");
       event_base_loopexit(base, NULL);

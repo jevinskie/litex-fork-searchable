@@ -1,0 +1,41 @@
+Language: Cpp                                      # single option
+BasedOnStyle: LLVM                                 # edit distance 431
+AlignAfterOpenBracket: DontAlign                   # edit distance 229
+AlignConsecutiveAssignments: None                  # edit distance 229
+AlignConsecutiveDeclarations: None                 # edit distance 229
+AllowAllArgumentsOnNextLine: true                  # edit distance 229
+AllowShortIfStatementsOnASingleLine: Never         # edit distance 229
+AlwaysBreakAfterDefinitionReturnType: None         # edit distance 229
+AlwaysBreakAfterReturnType: None                   # edit distance 229
+BinPackArguments: true                             # edit distance 229
+BinPackParameters: true                            # edit distance 229
+BreakBeforeBraces: Custom                          # edit distance 218
+BraceWrapping:
+  AfterControlStatement: Never                     # edit distance 229
+  AfterFunction: true                              # edit distance 218
+  AfterStruct: false                               # edit distance 218
+  IndentBraces: false                              # edit distance 218
+ColumnLimit: 140                                   # edit distance 199
+ContinuationIndentWidth: 0                         # edit distance 195
+Cpp11BracedListStyle: true                         # edit distance 195
+IncludeBlocks: Merge                               # edit distance 192
+IndentAccessModifiers: false                       # edit distance 192
+IndentWidth: 2                                     # edit distance 192
+MaxEmptyLinesToKeep: 2                             # edit distance 192
+PenaltyBreakAssignment: 2                          # edit distance 192
+PointerAlignment: Right                            # edit distance 192
+RemoveBracesLLVM: false                            # edit distance 192
+SeparateDefinitionBlocks: Leave                    # edit distance 192
+SortIncludes: Never                                # edit distance 93
+SpaceAfterCStyleCast: false                        # edit distance 93
+SpaceAfterLogicalNot: false                        # edit distance 93
+SpaceBeforeAssignmentOperators: true               # edit distance 93
+SpaceBeforeParens: Custom                          # edit distance 78
+SpaceBeforeParensOptions:
+  AfterControlStatements: false                    # edit distance 78
+  AfterFunctionDefinitionName: false               # edit distance 78
+  BeforeNonEmptyParentheses: false                 # edit distance 78
+SpaceBeforeSquareBrackets: false                   # edit distance 78
+SpacesInCStyleCastParentheses: false               # edit distance 78
+SpacesInConditionalStatement: false                # edit distance 78
+SpacesInParentheses: false                         # edit distance 78

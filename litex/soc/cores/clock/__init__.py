@@ -5,6 +5,7 @@ from litex.soc.cores.clock.xilinx_us  import USPLL,  USMMCM,  USIDELAYCTRL
 from litex.soc.cores.clock.xilinx_usp import USPPLL, USPMMCM, USPIDELAYCTRL
 
 # Intel
+from litex.soc.cores.clock.intel_arria10   import Arria10FPLL, Arria10IOPLL
 from litex.soc.cores.clock.intel_max10     import Max10PLL
 from litex.soc.cores.clock.intel_cyclone4  import CycloneIVPLL
 from litex.soc.cores.clock.intel_cyclone5  import CycloneVPLL

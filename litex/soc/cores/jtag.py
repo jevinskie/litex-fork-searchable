@@ -300,7 +300,7 @@ class AlteraJTAG(Module):
             "stratixiv_jtag"              : [],
             "stratixv_jtag"               : [],
             "twentynm_jtagblock"          : [],
-            "twentynm_jtag"               : [],
+            "twentynm_jtag"               : ["10a"],
             "twentynm_hps_interface_jtag" : [],
         }
         for prim, prim_devs in prim_dict.items():

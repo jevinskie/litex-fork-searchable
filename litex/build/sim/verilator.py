@@ -146,7 +146,7 @@ make -C . -f {} {} {} {} {} {}
     "TRACE_FST=1" if trace_fst else "",
     )
     build_script_file = "build_" + build_name + ".sh"
-    tools.write_to_file(build_script_file, build_script_contents, force_unix=True)
+    tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
 
 def _compile_sim(build_name, verbose):
     build_script_file = "build_" + build_name + ".sh"
@@ -169,7 +169,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents = "sudo " if as_root else ""
     run_script_contents += "obj_dir/Vsim"
     run_script_file = "run_" + build_name + ".sh"
-    tools.write_to_file(run_script_file, run_script_contents, force_unix=True)
+    tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
         import termios
         termios_settings = termios.tcgetattr(sys.stdin.fileno())

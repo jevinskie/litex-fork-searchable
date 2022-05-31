@@ -28,7 +28,7 @@ def language_by_filename(name):
     return None
 
 
-def write_to_file(filename, contents, force_unix=False):
+def write_to_file(filename, contents, force_unix=False, chmod=None):
     newline = None
     if force_unix:
         newline = "\n"
@@ -39,6 +39,8 @@ def write_to_file(filename, contents, force_unix=False):
     if old_contents != contents:
         with open(filename, "w", newline=newline) as f:
             f.write(contents)
+    if chmod is not None:
+        os.chmod(filename, chmod)
 
 def replace_in_file(filename, _from, _to):
     # Read in the file

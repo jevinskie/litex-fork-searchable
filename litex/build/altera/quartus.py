@@ -176,7 +176,7 @@ then
 fi
 """
     script_contents = script_contents.format(build_name=build_name)
-    tools.write_to_file(script_file, script_contents, force_unix=True)
+    tools.write_to_file(script_file, script_contents, force_unix=True, chmod=0o755)
 
     return script_file
 

@@ -18,6 +18,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
+import re
 import json
 import time
 import datetime
@@ -74,7 +75,7 @@ def get_cpu_mak(cpu, compile_software):
         for i in range(len(triple)):
             t = triple[i]
             # Use native toolchain if host and target platforms are the same.
-            if t == 'riscv64-unknown-elf' and p == 'linux-riscv64':
+            if t == "riscv64-unknown-elf" and p == "linux-riscv64":
                 r = '--native--'
                 break
             if which(t+"-gcc"):
@@ -88,10 +89,29 @@ def get_cpu_mak(cpu, compile_software):
                 msg += "- " + triple[i] + "\n"
             raise OSError(msg)
         return r
+    selected_triple = select_triple(triple)
+
+    # RISC-V's march zicsr workaround (for binutils >= 2.37).
+    def get_binutils_version():
+        version = 0
+        for i, l in enumerate(os.popen(selected_triple + "-ar -V")):
+            # Version is last float reported in first line.
+            if i == 0:
+                version = float(re.findall("\d+\.\d+", l)[-1])
+        return version
+
+    def apply_riscv_zicsr_march_workaround(flags):
+        # Append _zicsr to march when binutils >= 2.37 and zicsr is not present.
+        if (get_binutils_version() >= 2.37) and ("zicsr" not in flags):
+            flags = re.compile("-march=([^ ]+)").sub("-march=\\1_zicsr", flags)
+        return flags
+
+    if (not clang) and ("riscv" in selected_triple):
+        flags = apply_riscv_zicsr_march_workaround(flags)
 
     # Return informations.
     return [
-        ("TRIPLE",        select_triple(triple)),
+        ("TRIPLE",        selected_triple),
         ("CPU",           cpu.name),
         ("CPUFAMILY",     cpu.family),
         ("CPUFLAGS",      flags),

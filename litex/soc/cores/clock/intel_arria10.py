@@ -6,9 +6,22 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
+import migen.fhdl.specials
 
+from litex.gen.fhdl.verilog import instance_enable_plain_printing, _print_expression
 from litex.soc.cores.clock.common import *
 from litex.soc.cores.clock.intel_common import *
+
+import sys
+
+class InstancePlain(Instance):
+    def emit_verilog(instance, ns, add_data_file):
+        print("f emit_verilog")
+        orig_print_expr = migen.fhdl.specials.verilog_printexpr
+        migen.fhdl.specials.verilog_printexpr = _print_expression
+        verilog = super().emit_verilog(instance, ns, add_data_file)
+        migen.fhdl.specials.verilog_printexpr = orig_print_expr
+        return verilog
 
 # Intel / Arria 10 ---------------------------------------------------------------------------------
 
@@ -27,6 +40,27 @@ class Arria10FPLL(IntelClocking):
         self.logger.info("Creating Arria10FPLL.")
         super().__init__()
 
+    def do_finalize(self):
+        assert hasattr(self, "clkin")
+        config = self.compute_config()
+        clks = Signal(self.nclkouts)
+        self.params.update(
+            p_reference_clock_frequency = int(1e12/self.clkin_freq),
+            p_operation_mode            = "normal",
+            i_refclk                    = self.clkin,
+            o_outclk                    = clks,
+            i_rst                       = ~self.locked,
+            o_locked                    = self.locked,
+        )
+        for n, (clk, f, p, m) in sorted(self.clkouts.items()):
+            clk_phase_ps = int((1e12/config[f"clk{n}_freq"])*config[f"clk{n}_phase"]/360)
+            self.params[f"p_output_clock_frequency{n}"] = config[f"clk{n}_freq"]
+            self.params[f"p_phase_shift{n}"] = clk_phase_ps
+            self.params[f"p_clock_name_{n}"] = f"dummyname2{n}"
+            self.comb += clk.eq(clks[n])
+        inst = InstancePlain("altera_pll", **self.params)
+        instance_enable_plain_printing(inst)
+        self.specials += inst
 
 class Arria10IOPLL(IntelClocking):
     nclkouts_max   = 8
@@ -58,10 +92,10 @@ class Arria10IOPLL(IntelClocking):
         self.params.update(
             p_clock_to_compensate       = 0,
             p_reference_clock_frequency = int(1e12/self.clkin_freq),
-            p_operation_mode            = "NORMAL",
+            p_operation_mode            = "normal",
             i_refclk                    = self.clkin,
             o_outclk                    = clks,
-            i_rst                       = 0,
+            i_rst                       = ~self.locked,
             o_locked                    = self.locked,
         )
         for n, (clk, f, p, m) in sorted(self.clkouts.items()):
@@ -70,4 +104,6 @@ class Arria10IOPLL(IntelClocking):
             self.params[f"p_phase_shift{n}"] = clk_phase_ps
             self.params[f"p_clock_name_{n}"] = f"dummyname{n}"
             self.comb += clk.eq(clks[n])
-        self.specials += Instance("altera_iopll", **self.params)
+        inst = Instance("altera_iopll", **self.params)
+        instance_enable_plain_printing(inst)
+        self.specials += inst

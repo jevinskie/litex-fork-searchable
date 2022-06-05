@@ -33,7 +33,7 @@ class Arria10FPLL(IntelClocking):
         config = self.compute_config()
         clks = Signal(self.nclkouts)
         self.params.update(
-            p_reference_clock_frequency = int(1e12/self.clkin_freq),
+            p_reference_clock_frequency = f"{self.clkin_freq/1e6} MHz",
             p_operation_mode            = "normal",
             i_refclk                    = self.clkin,
             o_outclk                    = clks,
@@ -42,8 +42,8 @@ class Arria10FPLL(IntelClocking):
         )
         for n, (clk, f, p, m) in sorted(self.clkouts.items()):
             clk_phase_ps = int((1e12/config[f"clk{n}_freq"])*config[f"clk{n}_phase"]/360)
-            self.params[f"p_output_clock_frequency{n}"] = config[f"clk{n}_freq"]
-            self.params[f"p_phase_shift{n}"] = clk_phase_ps
+            self.params[f"p_output_clock_frequency{n}"] = f"{config[f'clk{n}_freq']/1e6} MHz"
+            self.params[f"p_phase_shift{n}"] = f"{clk_phase_ps} ps"
             self.params[f"p_clock_name_{n}"] = f"dummyname2{n}"
             self.comb += clk.eq(clks[n])
         self.specials += InstancePlainParameters("altera_pll", **self.params)
@@ -78,7 +78,7 @@ class Arria10IOPLL(IntelClocking):
         clks = Signal(self.nclkouts)
         self.params.update(
             p_clock_to_compensate       = 0,
-            p_reference_clock_frequency = int(1e12/self.clkin_freq),
+            p_reference_clock_frequency = f"{self.clkin_freq/1e6} MHz",
             p_operation_mode            = "normal",
             i_refclk                    = self.clkin,
             o_outclk                    = clks,
@@ -87,8 +87,8 @@ class Arria10IOPLL(IntelClocking):
         )
         for n, (clk, f, p, m) in sorted(self.clkouts.items()):
             clk_phase_ps = int((1e12/config[f"clk{n}_freq"])*config[f"clk{n}_phase"]/360)
-            self.params[f"p_output_clock_frequency{n}"] = config[f"clk{n}_freq"]
-            self.params[f"p_phase_shift{n}"] = clk_phase_ps
+            self.params[f"p_output_clock_frequency{n}"] = f"{config[f'clk{n}_freq']/1e6} MHz"
+            self.params[f"p_phase_shift{n}"] = f"{clk_phase_ps} ps"
             self.params[f"p_clock_name_{n}"] = f"dummyname{n}"
             self.comb += clk.eq(clks[n])
         self.specials += InstancePlainParameters("altera_iopll", **self.params)

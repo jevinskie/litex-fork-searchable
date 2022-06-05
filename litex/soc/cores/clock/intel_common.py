@@ -55,26 +55,49 @@ class IntelClocking(Module, AutoCSR):
         config = {}
         for n in range(*self.n_div_range):
             config["n"] = n
+            if n == 10 or n == 12:
+                print(f"n: {n}")
             for m in reversed(range(*self.m_div_range)):
                 all_valid = True
+                if m == 10 or m == 12:
+                    print(f"m: {m} n: {n}")
                 vco_freq = self.clkin_freq*m/n
                 (vco_freq_min, vco_freq_max) = self.vco_freq_range
                 if (vco_freq >= vco_freq_min*(1 + self.vco_margin) and
                     vco_freq <= vco_freq_max*(1 - self.vco_margin)):
+                    clk_valid = [False] * len(self.clkouts)
                     for _n, (clk, f, p, _m) in sorted(self.clkouts.items()):
                         valid = False
                         best_diff = float("inf")
+                        if _m == 10 or _m == 12:
+                            print(f"_m: {_m} m: {m} n: {n} _n: {_n}")
                         for c in clkdiv_range(*self.c_div_range):
                             clk_freq = vco_freq/c
                             diff = abs(clk_freq - f)
+                            diff_acceptable = diff <= f*_m
+                            if diff_acceptable:
+                                print(f"diff: {diff} c: {c} _m: {_m} m: {m} n: {n} _n: {_n}")
+                            if c == 10 or c == 12:
+                                print(f"c: {c} _m: {_m} m: {m} n: {n}")
                             if diff <= f*_m and diff < best_diff:
                                 config["clk{}_freq".format(_n)]   = clk_freq
                                 config["clk{}_divide".format(_n)] = c
                                 config["clk{}_phase".format(_n)]  = p
-                                valid = True
+                                clk_valid[_n] = True
                                 best_diff = diff
-                        if not valid:
-                            all_valid = False
+                                if diff == 0:
+                                    print(f"cant find better: inner diff: {diff} c: {c} _m: {_m} m: {m} n: {n} _n: {_n}")
+                                    # break
+                            if diff == 0:
+                                print(f"cant find better: outer diff: {diff} c: {c} _m: {_m} m: {m} n: {n} _n: {_n}")
+                                # break
+                        if diff == 0:
+                            print(f"cant find better: outer2 diff: {diff} c: {c} _m: {_m} m: {m} n: {n} _n: {_n}")
+                            # break
+                    if diff == 0:
+                        print(f"cant find better: outer3 diff: {diff} c: {c} _m: {_m} m: {m} n: {n} _n: {_n}")
+                        # break
+                    all_valid = all(clk_valid)
                 else:
                     all_valid = False
                 if all_valid:

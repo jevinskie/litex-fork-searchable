@@ -24,7 +24,7 @@ from migen.fhdl.structure import *
 from migen.fhdl.structure import _Operator, _Slice, _Assign, _Fragment
 from migen.fhdl.tools import *
 from migen.fhdl.conv_output import ConvOutput
-from migen.fhdl.specials import Memory, Instance
+from migen.fhdl.specials import Memory
 
 from litex.gen.fhdl.namer import build_namespace
 from litex.build.tools import get_litex_git_revision
@@ -133,28 +133,10 @@ _ieee_1800_2017_verilog_reserved_keywords = {
 #                                       EXPRESSIONS                                                #
 # ------------------------------------------------------------------------------------------------ #
 
-# Helper to set Instance parameters to plain printing ----------------------------------------------
-
-def instance_enable_plain_printing(instance):
-    print(f"instance: {instance}")
-    print(f"items: {instance.items}")
-    for item in instance.items:
-        print(f"item.value: {getattr(item, 'value', 'noval')}")
-        print(f"name: {getattr(item, 'name', 'noname')}")
-        if isinstance(item, Instance.Parameter) and isinstance(item.value, Constant):
-            print(f"nbits: {item.value.nbits}")
-            item.value.print_plain = True
-            item.print_plain = True
-            print(f"item.print_plain: {item.value.print_plain}")
-
 # Print Constant -----------------------------------------------------------------------------------
 
 def _print_constant(node):
-    if node.nbits == 13:
-        print(f"node: {node} val: {node.value}")
     if getattr(node, "print_plain", False):
-        print("printin plain")
-        print(f"str: {str(node.value)} repr: {repr(node.value)} plain: {node.value}")
         return str(node.value), node.signed
     return "{sign}{bits}'d{value}".format(
         sign  = "" if node.value >= 0 else "-",

@@ -6,22 +6,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
-import migen.fhdl.specials
 
-from litex.gen.fhdl.verilog import instance_enable_plain_printing, _print_expression
+from litex.gen.fhdl.utils import InstancePlainParameters
 from litex.soc.cores.clock.common import *
 from litex.soc.cores.clock.intel_common import *
-
-import sys
-
-class InstancePlain(Instance):
-    def emit_verilog(instance, ns, add_data_file):
-        print("f emit_verilog")
-        orig_print_expr = migen.fhdl.specials.verilog_printexpr
-        migen.fhdl.specials.verilog_printexpr = _print_expression
-        verilog = super().emit_verilog(instance, ns, add_data_file)
-        migen.fhdl.specials.verilog_printexpr = orig_print_expr
-        return verilog
 
 # Intel / Arria 10 ---------------------------------------------------------------------------------
 
@@ -58,9 +46,8 @@ class Arria10FPLL(IntelClocking):
             self.params[f"p_phase_shift{n}"] = clk_phase_ps
             self.params[f"p_clock_name_{n}"] = f"dummyname2{n}"
             self.comb += clk.eq(clks[n])
-        inst = InstancePlain("altera_pll", **self.params)
-        instance_enable_plain_printing(inst)
-        self.specials += inst
+        self.specials += InstancePlainParameters("altera_pll", **self.params)
+
 
 class Arria10IOPLL(IntelClocking):
     nclkouts_max   = 8
@@ -104,6 +91,4 @@ class Arria10IOPLL(IntelClocking):
             self.params[f"p_phase_shift{n}"] = clk_phase_ps
             self.params[f"p_clock_name_{n}"] = f"dummyname{n}"
             self.comb += clk.eq(clks[n])
-        inst = Instance("altera_iopll", **self.params)
-        instance_enable_plain_printing(inst)
-        self.specials += inst
+        self.specials += InstancePlainParameters("altera_iopll", **self.params)

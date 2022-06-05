@@ -63,16 +63,16 @@ class IntelClocking(Module, AutoCSR):
                     vco_freq <= vco_freq_max*(1 - self.vco_margin)):
                     for _n, (clk, f, p, _m) in sorted(self.clkouts.items()):
                         valid = False
+                        best_diff = float("inf")
                         for c in clkdiv_range(*self.c_div_range):
                             clk_freq = vco_freq/c
-                            if abs(clk_freq - f) <= f*_m:
+                            diff = abs(clk_freq - f)
+                            if diff <= f*_m and diff < best_diff:
                                 config["clk{}_freq".format(_n)]   = clk_freq
                                 config["clk{}_divide".format(_n)] = c
                                 config["clk{}_phase".format(_n)]  = p
                                 valid = True
-                                break
-                            if valid:
-                                break
+                                best_diff = diff
                         if not valid:
                             all_valid = False
                 else:

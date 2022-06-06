@@ -45,7 +45,7 @@ class OpenOCD(GenericProgrammer):
         if "ecp5" in cfg_str:
             chain = 0x32
         # Intel Max10.
-        elif "10m50" in cfg_str:
+        elif "10m50" in cfg_str or "10a" in cfg_str:
             chain = 0xc
         # Xilinx ZynqMP.
         elif "zynqmp" in cfg_str:

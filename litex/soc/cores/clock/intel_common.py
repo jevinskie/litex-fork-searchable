@@ -59,7 +59,6 @@ class IntelClocking(Module, AutoCSR):
 
     def compute_config(self):
         valid_configs = {}
-
         for n in range(*self.n_div_range):
             for m in range(*self.m_div_range):
                 diff_ratios = [None] * len(self.clkouts)
@@ -70,7 +69,6 @@ class IntelClocking(Module, AutoCSR):
                     vco_freq <= vco_freq_max*(1 - self.vco_margin)):
                     clk_valid = [False] * len(self.clkouts)
                     for _n, (clk, f, p, _m) in sorted(self.clkouts.items()):
-                        valid = False
                         best_diff = float("inf")
                         for c in clkdiv_range(*self.c_div_range):
                             clk_freq = vco_freq/c

@@ -12,6 +12,7 @@
 from migen import *
 from migen.genlib.cdc import AsyncResetSynchronizer, MultiReg
 
+from litex.gen.fhdl.utils import rename_fsm
 from litex.soc.interconnect import stream
 
 # JTAG TAP FSM -------------------------------------------------------------------------------------
@@ -30,7 +31,7 @@ class JTAGTAPFSM(Module):
             logic.append(Case(tms, nextstates))
 
             # Ongoing logic.
-            ongoing = Signal()
+            ongoing = Signal(name=name)
             setattr(self, name, ongoing)
             logic.append(ongoing.eq(1))
 
@@ -154,6 +155,10 @@ class JTAGTAPFSM(Module):
                 1 : "SELECT_DR_SCAN",
             }
         )
+
+    # def do_finalize(self):
+    #     super().do_finalize()
+    #     rename_fsm(self.fsm, "jtag_tap_fsm")
 
 
 # GPIO (Soft) JTAG ---------------------------------------------------------------------------------
@@ -459,8 +464,7 @@ class JTAGPHY(Module):
             elif device == "gpio":
                 jtag = GPIOJTAG(pads=platform.request("gpio_jtag"))
             else:
-                print(device)
-                raise NotImplementedError
+                raise NotImplementedError(f"JTAG not implemented for device: {device}")
             self.submodules.jtag = jtag
 
         # JTAG clock domain ------------------------------------------------------------------------
@@ -499,8 +503,9 @@ class JTAGPHY(Module):
         fsm = FSM(reset_state="XFER-READY")
         fsm = ClockDomainsRenamer("jtag")(fsm)
         fsm = ResetInserter()(fsm)
-        self.submodules += fsm
+        self.submodules.fsm = fsm
         self.comb += fsm.reset.eq(jtag.reset | jtag.capture)
+        self.jtagphy_xfer_ready = Signal()
         fsm.act("XFER-READY",
             jtag_tdo.eq(ready),
             If(jtag.shift,
@@ -509,8 +514,10 @@ class JTAGPHY(Module):
                 NextValue(data,  sink.data),
                 NextValue(count, 0),
                 NextState("XFER-DATA")
-            )
+            ),
+            self.jtagphy_xfer_ready.eq(1)
         )
+        self.jtagphy_xfer_data = Signal()
         fsm.act("XFER-DATA",
             jtag_tdo.eq(data),
             If(jtag.shift,
@@ -519,8 +526,10 @@ class JTAGPHY(Module):
                 If(count == (data_width - 1),
                     NextState("XFER-VALID")
                 )
-            )
+            ),
+            self.jtagphy_xfer_data.eq(1)
         )
+        self.jtagphy_xfer_valid = Signal()
         fsm.act("XFER-VALID",
             jtag_tdo.eq(valid),
             If(jtag.shift,
@@ -528,5 +537,11 @@ class JTAGPHY(Module):
                 source.data.eq(data),
                 NextValue(ready, source.ready),
                 NextState("XFER-READY")
-            )
+            ),
+            self.jtagphy_xfer_valid.eq(1)
         )
+
+    # def do_finalize(self):
+    #     super().do_finalize()
+    #     self.fsm.do_finalize()
+    #     rename_fsm(self.fsm, "jtagphy_fsm")

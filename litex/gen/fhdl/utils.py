@@ -26,7 +26,6 @@ def get_signals(obj, recurse=False):
                     signals.add(robj)
         elif recurse and isinstance(attr, Module):
             signals |= get_signals(attr, recurse=True)
-
     return signals
 
 def rename_fsm(fsm, name):

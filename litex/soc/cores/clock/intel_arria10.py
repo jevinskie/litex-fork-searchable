@@ -37,7 +37,7 @@ class Arria10FPLL(IntelClocking):
             p_operation_mode            = "normal",
             i_refclk                    = self.clkin,
             o_outclk                    = clks,
-            i_rst                       = ~self.locked,
+            i_rst                       = self.reset,
             o_locked                    = self.locked,
         )
         for n, (clk, f, p, m) in sorted(self.clkouts.items()):
@@ -82,7 +82,7 @@ class Arria10IOPLL(IntelClocking):
             p_operation_mode            = "normal",
             i_refclk                    = self.clkin,
             o_outclk                    = clks,
-            i_rst                       = ~self.locked,
+            i_rst                       = self.reset,
             o_locked                    = self.locked,
         )
         for n, (clk, f, p, m) in sorted(self.clkouts.items()):

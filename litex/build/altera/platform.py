@@ -15,6 +15,7 @@ from litex.build.altera import common, quartus
 class AlteraPlatform(GenericPlatform):
     bitstream_ext = ".sof"
     create_rbf    = True
+    dump_atoms    = False
 
     def __init__(self, *args, toolchain="quartus", **kwargs):
         GenericPlatform.__init__(self, *args, **kwargs)

@@ -44,9 +44,8 @@ class Arria10FPLL(IntelClocking):
             clk_phase_ps = int((1e12/config[f"clk{n}_freq"])*config[f"clk{n}_phase"]/360)
             self.params[f"p_output_clock_frequency{n}"] = f"{config[f'clk{n}_freq']/1e6} MHz"
             self.params[f"p_phase_shift{n}"] = f"{clk_phase_ps} ps"
-            self.params[f"p_clock_name_{n}"] = f"dummyname2{n}"
             self.comb += clk.eq(clks[n])
-        self.specials += InstancePlainParameters("altera_pll", **self.params)
+        self.specials += Instance("altera_pll", **self.params)
 
 
 class Arria10IOPLL(IntelClocking):
@@ -89,6 +88,5 @@ class Arria10IOPLL(IntelClocking):
             clk_phase_ps = int((1e12/config[f"clk{n}_freq"])*config[f"clk{n}_phase"]/360)
             self.params[f"p_output_clock_frequency{n}"] = f"{config[f'clk{n}_freq']/1e6} MHz"
             self.params[f"p_phase_shift{n}"] = f"{clk_phase_ps} ps"
-            self.params[f"p_clock_name_{n}"] = f"dummyname{n}"
             self.comb += clk.eq(clks[n])
-        self.specials += InstancePlainParameters("altera_iopll", **self.params)
+        self.specials += Instance("altera_iopll", **self.params)

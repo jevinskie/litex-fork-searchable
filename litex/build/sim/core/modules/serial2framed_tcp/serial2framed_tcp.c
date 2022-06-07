@@ -21,6 +21,8 @@
 
 #define MAX_PACKET_LEN 2000
 
+#define DEBUG
+
 struct tcp_packet_s {
   char data[MAX_PACKET_LEN];
   ssize_t len;
@@ -52,6 +54,17 @@ struct session_s {
 };
 
 struct event_base *base;
+
+#ifdef DEBUG
+static void hexdump(const char *name, void *buf, size_t len) {
+  printf("%s: ", name);
+  const uint8_t *p = (const uint8_t *)buf;
+  while (len--) {
+    printf("%02hhx ", *p++);
+  }
+  printf("\n");
+}
+#endif
 
 int litex_sim_module_get_args(char *args, char *arg, char **val, bool optional)
 {
@@ -144,6 +157,9 @@ void read_handler(int fd, short event, void *arg)
   }
   pkt_sz = ntohl(pkt_sz);
   tp->len = recv(s->sock, &tp->data, pkt_sz, 0);
+#ifdef DEBUG
+  hexdump("h2d_raw", tp->data, pkt_sz);
+#endif
   if(tp->len != pkt_sz) {
     perror("serial2framed_tcp: recv() of frame body");
     event_base_loopexit(base, NULL);
@@ -381,6 +397,9 @@ static int serial2framed_tcp_tick(void *sess, uint64_t time_ps)
     uint32_t net_sz = htonl(s->datalen);
     memcpy(sendbuf, &net_sz, sizeof(uint32_t));
     memcpy(sendbuf + sizeof(uint32_t), s->databuf, s->datalen);
+#ifdef DEBUG
+    hexdump("d2h_raw", s->databuf, s->datalen);
+#endif
     sent_sz = send(s->sock, sendbuf, s->datalen + sizeof(uint32_t), 0);
     if(sent_sz != s->datalen + sizeof(uint32_t)) {
       perror("serial2framed_tcp: send()");

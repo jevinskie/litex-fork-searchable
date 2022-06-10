@@ -282,7 +282,16 @@ def _print_expression(ns, node):
 
 def _print_node(ns, at, level, node, target_filter=None):
     if target_filter is not None and target_filter not in list_targets(node):
+        if isinstance(node, Display):
+            import traceback
+            traceback.print_stack()
+            print(f"{target_filter} FUCK {node.s} FILTERED!!!!!!!!!!!!!!!!!!")
         return ""
+
+    if isinstance(node, Display):
+        import traceback
+        traceback.print_stack()
+        print(f"{target_filter} COOL {node.s} COOL!!!!!!!!!!")
 
     # Assignment.
     elif isinstance(node, _Assign):
@@ -317,6 +326,10 @@ def _print_node(ns, at, level, node, target_filter=None):
             css = [(k, v) for k, v in node.cases.items() if isinstance(k, Constant)]
             css = sorted(css, key=lambda x: x[0].value)
             for choice, statements in css:
+                if Display in map(type, statements):
+                    import traceback
+                    traceback.print_stack()
+                    print(f"display in: {statements} target_filter: {target_filter}")
                 r += "\t"*(level + 1) + _print_expression(ns, choice)[0] + ": begin\n"
                 r += _print_node(ns, at, level + 2, statements, target_filter)
                 r += "\t"*(level + 1) + "end\n"
@@ -331,6 +344,7 @@ def _print_node(ns, at, level, node, target_filter=None):
 
     # Display.
     elif isinstance(node, Display):
+        print(f"DISPLAY! string: {node.s}")
         s = "\"" + node.s + "\""
         for arg in node.args:
             s += ", "

@@ -361,6 +361,10 @@ def _print_node(ns, at, level, node, target_filter=None, sim=False):
     elif isinstance(node, Finish):
         return "\t"*level + "$finish;\n"
 
+    # NOP. Handy for NodeTransformers that want to delete elements
+    elif isinstance(node, NOPStatement):
+        return ""
+
     # Unknown.
     else:
         raise TypeError(f"Node of unrecognized type: {str(type(node))}")

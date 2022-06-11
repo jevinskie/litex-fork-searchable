@@ -283,14 +283,7 @@ def _print_expression(ns, node):
 (_AT_BLOCKING, _AT_NONBLOCKING, _AT_SIGNAL) = range(3)
 
 def _print_node(ns, at, level, node, target_filter=None, sim=False):
-    if isinstance(node, Display):
-        # traceback.print_stack()
-        print(f"Display made it COOL {node.s}")
-
     if target_filter is not None and (target_filter not in list_targets(node) and target_filter not in list_displays(node)):
-        if isinstance(node, Display):
-            # traceback.print_stack()
-            print(f"{target_filter} FUCK {node.s} FILTERED!!!!!!!!!!!!!!!!!!")
         return ""
 
     # Assignment.
@@ -312,8 +305,6 @@ def _print_node(ns, at, level, node, target_filter=None, sim=False):
     # If.
     elif isinstance(node, If):
         r = "\t"*level + "if (" + _print_expression(ns, node.cond)[0] + ") begin\n"
-        if "fixup_rx_data_out" in r:
-            print(f"!!!!!!!!!! node: {node} tf:     {target_filter} r: {r}")
         r += _print_node(ns, at, level + 1, node.t, target_filter)
         if node.f:
             r += "\t"*level + "end else begin\n"
@@ -328,9 +319,6 @@ def _print_node(ns, at, level, node, target_filter=None, sim=False):
             css = [(k, v) for k, v in node.cases.items() if isinstance(k, Constant)]
             css = sorted(css, key=lambda x: x[0].value)
             for choice, statements in css:
-                if Display in map(type, statements):
-                    print(f"display in: {statements} target_filter: {target_filter}")
-
                 r += "\t"*(level + 1) + _print_expression(ns, choice)[0] + ": begin\n"
                 r += _print_node(ns, at, level + 2, statements, target_filter)
                 r += "\t"*(level + 1) + "end\n"
@@ -345,7 +333,6 @@ def _print_node(ns, at, level, node, target_filter=None, sim=False):
 
     # Display.
     elif isinstance(node, Display):
-        print(f"DISPLAY! string: {node.s}")
         s = "\"" + node.s + "\""
         for arg in node.args:
             s += ", "
@@ -493,7 +480,6 @@ def _print_combinatorial_logic_sim(f, ns):
                 r += "end\n"
 
         for n, (d, stmts) in enumerate(display_stmt_map.items()):
-            print(f"!!! d: {d} stmts: {stmts}")
             assert isinstance(d, Display)
             r += "always @(*) begin\n"
             r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, d, sim=True)

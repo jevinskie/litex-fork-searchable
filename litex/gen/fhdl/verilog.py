@@ -287,7 +287,7 @@ def _print_node(ns, at, level, node, target_filter=None, sim=False):
         # traceback.print_stack()
         print(f"Display made it COOL {node.s}")
 
-    if target_filter is not None and target_filter not in list_targets(node):
+    if target_filter is not None and (target_filter not in list_targets(node) and target_filter not in list_displays(node)):
         if isinstance(node, Display):
             # traceback.print_stack()
             print(f"{target_filter} FUCK {node.s} FILTERED!!!!!!!!!!!!!!!!!!")
@@ -492,7 +492,7 @@ def _print_combinatorial_logic_sim(f, ns):
             print(f"!!! d: {d} stmts: {stmts}")
             assert isinstance(d, Display)
             r += "always @(*) begin\n"
-            r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, None, sim=True)
+            r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, d, sim=True)
             r += "end\n"
     r += "\n"
     return r

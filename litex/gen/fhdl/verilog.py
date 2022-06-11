@@ -29,6 +29,8 @@ from migen.fhdl.specials import Memory
 from litex.gen.fhdl.namer import build_namespace
 from litex.build.tools import get_litex_git_revision
 
+import traceback
+
 # ------------------------------------------------------------------------------------------------ #
 #                                     BANNER/TRAILER/SEPARATORS                                    #
 # ------------------------------------------------------------------------------------------------ #
@@ -280,18 +282,16 @@ def _print_expression(ns, node):
 
 (_AT_BLOCKING, _AT_NONBLOCKING, _AT_SIGNAL) = range(3)
 
-def _print_node(ns, at, level, node, target_filter=None):
+def _print_node(ns, at, level, node, target_filter=None, sim=False):
+    if isinstance(node, Display):
+        # traceback.print_stack()
+        print(f"Display made it COOL {node.s}")
+
     if target_filter is not None and target_filter not in list_targets(node):
         if isinstance(node, Display):
-            import traceback
-            traceback.print_stack()
+            # traceback.print_stack()
             print(f"{target_filter} FUCK {node.s} FILTERED!!!!!!!!!!!!!!!!!!")
         return ""
-
-    if isinstance(node, Display):
-        import traceback
-        traceback.print_stack()
-        print(f"{target_filter} COOL {node.s} COOL!!!!!!!!!!")
 
     # Assignment.
     elif isinstance(node, _Assign):
@@ -312,6 +312,8 @@ def _print_node(ns, at, level, node, target_filter=None):
     # If.
     elif isinstance(node, If):
         r = "\t"*level + "if (" + _print_expression(ns, node.cond)[0] + ") begin\n"
+        if "fixup_rx_data_out" in r:
+            print(f"!!!!!!!!!! node: {node} tf:     {target_filter} r: {r}")
         r += _print_node(ns, at, level + 1, node.t, target_filter)
         if node.f:
             r += "\t"*level + "end else begin\n"
@@ -327,9 +329,8 @@ def _print_node(ns, at, level, node, target_filter=None):
             css = sorted(css, key=lambda x: x[0].value)
             for choice, statements in css:
                 if Display in map(type, statements):
-                    import traceback
-                    traceback.print_stack()
                     print(f"display in: {statements} target_filter: {target_filter}")
+
                 r += "\t"*(level + 1) + _print_expression(ns, choice)[0] + ": begin\n"
                 r += _print_node(ns, at, level + 2, statements, target_filter)
                 r += "\t"*(level + 1) + "end\n"
@@ -467,23 +468,32 @@ def _print_combinatorial_logic_sim(f, ns):
         from collections import defaultdict
 
         target_stmt_map = defaultdict(list)
+        display_stmt_map = defaultdict(list)
 
         for statement in flat_iteration(f.comb):
             targets = list_targets(statement)
             for t in targets:
                 target_stmt_map[t].append(statement)
-
-        groups = group_by_targets(f.comb)
+            displays = list_displays(statement)
+            for d in displays:
+                display_stmt_map[d].append(statement)
 
         for n, (t, stmts) in enumerate(target_stmt_map.items()):
             assert isinstance(t, Signal)
             if len(stmts) == 1 and isinstance(stmts[0], _Assign):
-                r += "assign " + _print_node(ns, _AT_BLOCKING, 0, stmts[0])
+                r += "assign " + _print_node(ns, _AT_BLOCKING, 0, stmts[0], sim=True)
             else:
                 r += "always @(*) begin\n"
                 r += "\t" + ns.get_name(t) + " <= " + _print_expression(ns, t.reset)[0] + ";\n"
-                r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, t)
+                r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, t, sim=True)
                 r += "end\n"
+
+        for n, (d, stmts) in enumerate(display_stmt_map.items()):
+            print(f"!!! d: {d} stmts: {stmts}")
+            assert isinstance(d, Display)
+            r += "always @(*) begin\n"
+            r += _print_node(ns, _AT_NONBLOCKING, 1, stmts, None, sim=True)
+            r += "end\n"
     r += "\n"
     return r
 

@@ -1,4 +1,5 @@
 from migen import *
+from litex.gen.fhdl.verilog import VerilogTime
 
 
 class MonitorArg:
@@ -44,3 +45,20 @@ class Monitor(Module):
             self.comb += changed.eq(changed | (old_sig != sig))
 
         self.sync += If(changed, Display(fmt, *arg_sigs))
+
+
+class MonitorFSMState(Module):
+    def __init__(self, fsm, description="", ticks=False, time=False):
+        fmt = ""
+        args = []
+        if time:
+            fmt += "time: %0d "
+            args.append(VerilogTime())
+        if ticks:
+            fmt += "tick: %0d "
+            nclks = Signal(64)
+            self.sync += nclks.eq(nclks + 1)
+            args.append(nclks)
+        fmt += description
+        for state in fsm.actions.keys():
+            fsm.act(state, DisplayEnter(f"{fmt} entered {state}", *args))

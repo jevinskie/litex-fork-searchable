@@ -322,6 +322,12 @@ class Builder:
         # Export SoC Mapping.
         self._generate_csr_map()
 
+        # Translate compile_gateware to run.
+        if "run" not in kwargs:
+            kwargs["run"] = self.compile_gateware
+        is_sim_run = kwargs["run"] and "sim_config" in kwargs
+        self.compile_software &= not is_sim_run
+
         # Compile the BIOS when the SoC uses it.
         if self.soc.cpu_type is not None:
             if self.soc.cpu.use_rom:
@@ -342,13 +348,9 @@ class Builder:
                 if use_bios and self.soc.integrated_rom_size:
                     self._initialize_rom_software()
 
-        # Translate compile_gateware to run.
-        if "run" not in kwargs:
-            kwargs["run"] = self.compile_gateware
-
         # Build SoC and pass Verilog Name Space to do_exit.
         vns = self.soc.build(build_dir=self.gateware_dir, **kwargs)
-        if not (kwargs["run"] and "sim_config" in kwargs):
+        if not is_sim_run:
             self.soc.do_exit(vns=vns)
 
         # Generate SoC Documentation.

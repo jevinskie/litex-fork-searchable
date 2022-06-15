@@ -5,6 +5,7 @@
 # Copyright (c) 2017 Pierre-Olivier Vauboin <po@lambdaconcept>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import logging
 import os
 import sys
 import subprocess
@@ -18,6 +19,8 @@ from litex.build.generic_platform import *
 
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
+
+_logger = logging.getLogger("Verilator")
 
 
 def _generate_sim_h_struct(name, index, siglist):
@@ -150,6 +153,7 @@ make -C . -f {} {} {} {} {} {}
     tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
 
 def _compile_sim(build_name, verbose):
+    _logger.info("Sim gateware building...")
     build_script_file = "build_" + build_name + ".sh"
     p = subprocess.Popen(["bash", build_script_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, _ = p.communicate()
@@ -162,6 +166,7 @@ def _compile_sim(build_name, verbose):
         raise OSError("Subprocess failed with {}\n{}".format(p.returncode, "\n".join(error_messages)))
     if verbose:
         print(output)
+    _logger.info("Sim gateware built.")
 
 def _run_sim(build_name, as_root=False, interactive=True):
     run_script_contents = "#!/usr/bin/env bash\n"

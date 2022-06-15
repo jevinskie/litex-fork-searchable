@@ -262,7 +262,8 @@ class Builder:
         for name, src_dir in self.software_packages:
             _create_dir(os.path.join(self.software_dir, name))
 
-    def _generate_rom_software(self, compile_bios=True):
+    def _generate_rom_software(self, compile_bios=True, verbose=True):
+        self.soc.logger.info("Software building...")
         # Compile all software packages.
         for name, src_dir in self.software_packages:
 
@@ -273,7 +274,21 @@ class Builder:
             dst_dir  = os.path.join(self.software_dir, name)
             makefile = os.path.join(src_dir, "Makefile")
             if self.compile_software:
-                subprocess.check_call(["make", "-C", dst_dir, "-f", makefile])
+                p = subprocess.Popen(["make", "-C", dst_dir, "-f", makefile],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT
+                )
+                output, _ = p.communicate()
+                output = output.decode('utf-8')
+                if p.returncode != 0:
+                    error_messages = []
+                    for l in output.splitlines():
+                        if verbose or "error" in l.lower():
+                            error_messages.append(l)
+                    raise OSError("make failed with {}\n{}".format(p.returncode, "\n".join(error_messages)))
+                if verbose:
+                    print(output)
+        self.soc.logger.info("Software done building.")
 
     def _initialize_rom_software(self):
         # Get BIOS data from compiled BIOS binary.
@@ -326,11 +341,10 @@ class Builder:
         if "run" not in kwargs:
             kwargs["run"] = self.compile_gateware
         is_sim_run = kwargs["run"] and "sim_config" in kwargs
-        self.compile_software &= not is_sim_run
 
         # Compile the BIOS when the SoC uses it.
         if self.soc.cpu_type is not None:
-            if self.soc.cpu.use_rom:
+            if self.soc.cpu.use_rom and not is_sim_run:
                 # Prepare/Generate ROM software.
                 use_bios = (
                     # BIOS compilation enabled.
@@ -342,7 +356,7 @@ class Builder:
                     self.soc.check_bios_requirements()
                     self._check_meson()
                 self._prepare_rom_software()
-                self._generate_rom_software(compile_bios=use_bios)
+                self._generate_rom_software(compile_bios=use_bios, verbose=kwargs.get("verbose", True))
 
                 # Initialize ROM.
                 if use_bios and self.soc.integrated_rom_size:

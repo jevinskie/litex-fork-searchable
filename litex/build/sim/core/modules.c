@@ -3,7 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#pragma GCC push_options
+#pragma GCC optimize "no-strict-aliasing"
 #include "tinydir.h"
+#pragma GCC pop_options
+#pragma GCC diagnostic pop
+
 #include "error.h"
 #include "libdylib.h"
 #include "modules.h"

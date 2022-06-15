@@ -136,6 +136,7 @@ def _build_sim(build_name, sources, threads, coverage, opt_level="O3", trace_fst
     for filename, language, library, *copy in sources:
         cc_srcs.append("--cc " + filename + " ")
     build_script_contents = """\
+#!/usr/bin/env bash
 rm -rf obj_dir/
 make -C . -f {} {} {} {} {} {}
 """.format(makefile,
@@ -163,11 +164,12 @@ def _compile_sim(build_name, verbose):
         print(output)
 
 def _run_sim(build_name, as_root=False, interactive=True):
+    run_script_contents = "#!/usr/bin/env bash\n"
     if which("litex_privesc") is not None:
-        run_script_contents = "litex_privesc " if as_root else ""
+        run_script_contents += "litex_privesc " if as_root else ""
     else:
-        run_script_contents = "sudo " if as_root else ""
-    run_script_contents += "obj_dir/Vsim"
+        run_script_contents += "sudo " if as_root else ""
+    run_script_contents += "obj_dir/Vsim\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
@@ -191,7 +193,7 @@ class SimVerilatorToolchain:
             build            = True,
             run              = True,
             threads          = 1,
-            verbose          = True,
+            verbose          = False,
             sim_config       = None,
             coverage         = False,
             opt_level        = "O0",

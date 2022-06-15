@@ -41,7 +41,7 @@ sim: $(OBJS_SIM) | mkdir
 		$(SRCS_SIM_CPP) $(OBJS_SIM) \
 		--top-module sim \
 		$(if $(THREADS), --threads $(THREADS),) \
-		-CFLAGS "$(CFLAGS) -I$(SRC_DIR)" \
+		-CFLAGS "$(CFLAGS) -Wno-tautological-compare -I$(SRC_DIR)" \
 		-LDFLAGS "$(LDFLAGS)" \
 		--trace \
 		$(if $(TRACE_FST), --trace-fst,) \
@@ -52,7 +52,9 @@ sim: $(OBJS_SIM) | mkdir
 		--output-split-ctrace 500 \
 		$(INC_DIR) \
 		-Wno-BLKANDNBLK \
-		-Wno-WIDTH
+		-Wno-WIDTH \
+		-Wno-COMBDLY \
+		-Wno-CASEINCOMPLETE
 	make -j -C $(OBJ_DIR) -f Vsim.mk Vsim
 
 .PHONY: modules

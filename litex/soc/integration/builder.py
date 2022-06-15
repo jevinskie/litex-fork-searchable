@@ -264,7 +264,7 @@ class Builder:
 
     def _generate_rom_software(self, compile_bios=True):
         # Compile all software packages.
-         for name, src_dir in self.software_packages:
+        for name, src_dir in self.software_packages:
 
             # Skip BIOS compilation when disabled.
             if name == "bios" and not compile_bios:
@@ -348,7 +348,8 @@ class Builder:
 
         # Build SoC and pass Verilog Name Space to do_exit.
         vns = self.soc.build(build_dir=self.gateware_dir, **kwargs)
-        self.soc.do_exit(vns=vns)
+        if not (kwargs["run"] and "sim_config" in kwargs):
+            self.soc.do_exit(vns=vns)
 
         # Generate SoC Documentation.
         if self.generate_doc:

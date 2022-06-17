@@ -298,7 +298,7 @@ class Builder:
         # Initialize SoC with with BIOS data.
         self.soc.initialize_rom(bios_data)
 
-    def build(self, **kwargs):
+    def build(self, verbose=False, **kwargs):
         # Pass Output Directory to Platform.
         self.soc.platform.output_dir = self.output_dir
 
@@ -356,7 +356,7 @@ class Builder:
                     self.soc.check_bios_requirements()
                     self._check_meson()
                 self._prepare_rom_software()
-                self._generate_rom_software(compile_bios=use_bios, verbose=kwargs.get("verbose", True))
+                self._generate_rom_software(compile_bios=use_bios, verbose=verbose)
 
                 # Initialize ROM.
                 if use_bios and self.soc.integrated_rom_size:

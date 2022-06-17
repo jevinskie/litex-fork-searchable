@@ -67,7 +67,7 @@ class IntelClocking(Module, AutoCSR):
                             clk_freq = vco_freq/c
                             if abs(clk_freq - f) <= f*_m:
                                 config["clk{}_freq".format(_n)]   = clk_freq
-                                config["clk{}_divide".format(_n)] = c
+                                config["clk{}_divide".format(_n)] = c * n
                                 config["clk{}_phase".format(_n)]  = p
                                 valid = True
                                 break

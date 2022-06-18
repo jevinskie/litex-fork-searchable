@@ -9,9 +9,11 @@
 import sys
 import os
 import re
+from unicodedata import name
 
 from migen.fhdl.structure import Signal, Cat
 from migen.genlib.record import Record
+from numpy import isin
 
 from litex.gen.fhdl import verilog
 
@@ -41,25 +43,43 @@ class Pins:
 
 class PinRef:
     """Reference to another pin, emits set_instance_assignment -name -from -to"""
-    def __init__(self, port=None, idx=0, subsignal=None, relative=False):
-        if not (port or relative):
-            raise ValueError("Must specify a port or make the reference relative")
+    def __init__(self, identity=False, port=None, idx=0, subsignal=None, subidx=None, relative=False):
+        if int(identity) + int(bool(port)) + int(bool(subsignal)) != 1:
+            raise ValueError("Must specify a port, a reference relative, or identity mode")
         if relative and not subsignal:
             raise ValueError("Must specify the relative subsignal")
+        self.identity = identity
         self.port = port
         self.idx = idx
         self.subsignal = subsignal
+        self.subidx = subidx
         self.relative = relative
 
     def __repr__(self):
         return self.__class__.__name__ + \
-            f"(port={self.port}, idx={self.idx}, subsigal={self.subsignal}, relative={self.relative})"
+            f"(identity={self.identity}, port={self.port}, idx={self.idx}, subsigal={self.subsignal}, subidx={self.subidx}, relative={self.relative})"
+
+    def _subidx_suffix(self):
+        if self.subidx is None:
+            return ""
+        elif isinstance(self.subidx, int):
+            return f"[{self.subidx}]"
+        elif isinstance(self.subidx, slice):
+            return f"[{self.subidx.start if self.subidx.start else 0}..{self.subidx.stop-1}]"
 
     def signal_name(self, named_sc):
-        if not self.relative:
+        if self.identity:
+            for signame, _, constraints, handle in named_sc:
+                for constr in constraints:
+                    if not isinstance(constr, Misc):
+                        continue
+                    for m in constr.misc:
+                        if m is self:
+                            return signame + self._subidx_suffix()
+        elif not self.relative:
             for signame, _, _, handle in named_sc:
                 if (self.port, self.idx, self.subsig) == handle:
-                    return signame
+                    return signame + self._subidx_suffix()
         else:
             parent_handle = None
             for signame, _, constraints, handle in named_sc:
@@ -72,7 +92,7 @@ class PinRef:
                             break
             for signame, _, _, handle in named_sc:
                 if (parent_handle[0], parent_handle[1], self.subsignal) == handle:
-                    return signame
+                    return signame + self._subidx_suffix()
         raise ValueError(f"Pin {self} not found")
 
 

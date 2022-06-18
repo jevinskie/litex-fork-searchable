@@ -37,8 +37,14 @@ def _format_constraint(c, signame, fmt_r, named_sc):
                 tpl = "set_instance_assignment -comment \"{name}\" -name {misc[0]} \"{misc[1]}\" -to {signame}"
                 return tpl.format(signame=signame, name=fmt_r, misc=c.misc)
             else:
-                ref_sig_name = c.misc[1].signal_name(named_sc)
-                return f"set_instance_assignment -comment \"{fmt_r}\" -name {c.misc[0]} -from {signame} -to {ref_sig_name}"
+                to_str = c.misc[1].signal_name(named_sc)
+                return f"set_instance_assignment -comment \"{fmt_r}\" -name {c.misc[0]} -from {signame} -to {to_str}"
+        elif not isinstance(c.misc, str) and len(c.misc) == 3:
+            if not all(map(lambda o: isinstance(o, PinRef), c.misc[1:])):
+                raise ValueError("Format must be Misc(\"name\", PinRef(), PinRef())")
+            from_str = c.misc[1].signal_name(named_sc)
+            to_str = c.misc[2].signal_name(named_sc)
+            return f"set_instance_assignment -comment \"{fmt_r}\" -name {c.misc[0]} -from {from_str} -to {to_str}"
         else:
             tpl = "set_instance_assignment -comment \"{name}\"  -name {misc} -to {signame}"
             return tpl.format(signame=signame, name=fmt_r, misc=c.misc)
@@ -72,7 +78,7 @@ def _build_qsf_constraints(named_sc, named_pc):
             qsf.append(_format_qsf_constraint(sig, pins[0], others, resname, named_sc))
     if named_pc:
         qsf.append("\n\n" + "\n".join(named_pc))
-    return "\n".join(qsf)
+    return "\n".join(qsf) + "\n"
 
 # Timing Constraints (.sdc) ------------------------------------------------------------------------
 

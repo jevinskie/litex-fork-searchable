@@ -39,6 +39,43 @@ class Pins:
         return "{}('{}')".format(self.__class__.__name__, " ".join(self.identifiers))
 
 
+class PinRef:
+    """Reference to another pin, emits set_instance_assignment -name -from -to"""
+    def __init__(self, port=None, idx=0, subsignal=None, relative=False):
+        if not (port or relative):
+            raise ValueError("Must specify a port or make the reference relative")
+        if relative and not subsignal:
+            raise ValueError("Must specify the relative subsignal")
+        self.port = port
+        self.idx = idx
+        self.subsignal = subsignal
+        self.relative = relative
+
+    def __repr__(self):
+        return self.__class__.__name__ + \
+            f"(port={self.port}, idx={self.idx}, subsigal={self.subsignal}, relative={self.relative})"
+
+    def signal_name(self, named_sc):
+        if not self.relative:
+            for signame, _, _, handle in named_sc:
+                if (self.port, self.idx, self.subsig) == handle:
+                    return signame
+        else:
+            parent_handle = None
+            for signame, _, constraints, handle in named_sc:
+                for constr in constraints:
+                    if not isinstance(constr, Misc):
+                        continue
+                    for m in constr.misc:
+                        if m is self:
+                            parent_handle = handle
+                            break
+            for signame, _, _, handle in named_sc:
+                if (parent_handle[0], parent_handle[1], self.subsignal) == handle:
+                    return signame
+        raise ValueError(f"Pin {self} not found")
+
+
 class IOStandard:
     def __init__(self, name):
         self.name = name

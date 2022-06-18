@@ -14,12 +14,12 @@ from shutil import which
 
 from migen.fhdl.structure import _Fragment
 
-from litex.build.generic_platform import Pins, IOStandard, Misc
+from litex.build.generic_platform import PinRef, Pins, IOStandard, Misc
 from litex.build import tools
 
 # IO/Placement Constraints (.qsf) ------------------------------------------------------------------
 
-def _format_constraint(c, signame, fmt_r):
+def _format_constraint(c, signame, fmt_r, named_sc):
     # IO location constraints
     if isinstance(c, Pins):
         tpl = "set_location_assignment -comment \"{name}\" -to {signame} Pin_{pin}"
@@ -33,17 +33,21 @@ def _format_constraint(c, signame, fmt_r):
     # Others constraints
     elif isinstance(c, Misc):
         if not isinstance(c.misc, str) and len(c.misc) == 2:
-            tpl = "set_instance_assignment -comment \"{name}\" -name {misc[0]} \"{misc[1]}\" -to {signame}"
-            return tpl.format(signame=signame, name=fmt_r, misc=c.misc)
+            if not isinstance(c.misc[1], PinRef):
+                tpl = "set_instance_assignment -comment \"{name}\" -name {misc[0]} \"{misc[1]}\" -to {signame}"
+                return tpl.format(signame=signame, name=fmt_r, misc=c.misc)
+            else:
+                ref_sig_name = c.misc[1].signal_name(named_sc)
+                return f"set_instance_assignment -comment \"{fmt_r}\" -name {c.misc[0]} -from {signame} -to {ref_sig_name}"
         else:
             tpl = "set_instance_assignment -comment \"{name}\"  -name {misc} -to {signame}"
             return tpl.format(signame=signame, name=fmt_r, misc=c.misc)
 
-def _format_qsf_constraint(signame, pin, others, resname):
+def _format_qsf_constraint(signame, pin, others, resname, named_sc):
     fmt_r = "{}:{}".format(*resname[:2])
     if resname[2] is not None:
         fmt_r += "." + resname[2]
-    fmt_c = [_format_constraint(c, signame, fmt_r) for c in ([Pins(pin)] + others)]
+    fmt_c = [_format_constraint(c, signame, fmt_r, named_sc) for c in ([Pins(pin)] + others)]
     return '\n'.join(fmt_c)
 
 def _is_virtual_pin(pin_name):
@@ -61,13 +65,13 @@ def _build_qsf_constraints(named_sc, named_pc):
             for i, p in enumerate(pins):
                 if _is_virtual_pin(p):
                     continue
-                qsf.append(_format_qsf_constraint("{}[{}]".format(sig, i), p, others, resname))
+                qsf.append(_format_qsf_constraint("{}[{}]".format(sig, i), p, others, resname, named_sc))
         else:
             if _is_virtual_pin(pins[0]):
                 continue
-            qsf.append(_format_qsf_constraint(sig, pins[0], others, resname))
+            qsf.append(_format_qsf_constraint(sig, pins[0], others, resname, named_sc))
     if named_pc:
-        qsf.append("\n\n".join(named_pc))
+        qsf.append("\n\n" + "\n".join(named_pc))
     return "\n".join(qsf)
 
 # Timing Constraints (.sdc) ------------------------------------------------------------------------

@@ -6,13 +6,43 @@
 # This file is Copyright (c) 2020 Antmicro <www.antmicro.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import argparse
+
 from migen.fhdl.structure import Signal, If, Finish
 from migen.fhdl.module import Module
 from migen.genlib.record import Record
 
 from litex.build.generic_platform import GenericPlatform, Pins
-from litex.build.sim import common, verilator
+from litex.build.sim import common, iverilog, verilator
 from litex.soc.interconnect.csr import AutoCSR, CSR, CSRStorage
+from litex.build.sim.verilator import verilator_build_args, verilator_build_argdict
+from litex.build.sim.iverilog import iverilog_build_args, iverilog_build_argdict
+
+
+def sim_build_args(parser: argparse.ArgumentParser):
+    tc_arg_name = "--sim-toolchain"
+    tc_arg_kws = dict(default="verilator", help="Simulation toolchain")
+    stub_parser = argparse.ArgumentParser(parser.description, add_help=False)
+    stub_parser.add_argument(tc_arg_name, **tc_arg_kws)
+    parser.add_argument(tc_arg_name, **tc_arg_kws)
+    stub_args = stub_parser.parse_known_args()[0]
+    try:
+        {
+            "verilator": verilator_build_args,
+            "iverilog": iverilog_build_args,
+        }[stub_args.sim_toolchain](parser)
+    except KeyError:
+        raise NotImplementedError(f"Simulation toolchain '{stub_args.sim_toolchain}' is not supported.")
+
+
+def sim_build_argdict(args):
+    try:
+        return {
+            "verilator": verilator_build_argdict,
+            "iverilog": iverilog_build_argdict, 
+        }[args.sim_toolchain](args)
+    except KeyError:
+        raise NotImplementedError(f"Simulation toolchain '{args.sim_toolchain}' is not supported.")
 
 
 class SimPlatform(GenericPlatform):
@@ -23,8 +53,14 @@ class SimPlatform(GenericPlatform):
         self.sim_requested = []
         if toolchain == "verilator":
             self.toolchain = verilator.SimVerilatorToolchain()
+        elif toolchain == "iverilog":
+            self.toolchain = iverilog.SimIcarusToolchain()
+        elif toolchain == "questa":
+            raise NotImplementedError("TODO: questa")
+        elif toolchain == "cocotb":
+            raise NotImplementedError("TODO: cocotb")
         else:
-            raise ValueError(f"Unknown toolchain {toolchain}")
+            raise NotImplementedError(f"Unknown toolchain {toolchain}")
         # we must always request the sim_trace signal
         self.trace = self.request("sim_trace")
 

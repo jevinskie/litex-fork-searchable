@@ -14,9 +14,8 @@ import argparse
 from migen import *
 
 from litex.build.generic_platform import *
-from litex.build.sim import SimPlatform
+from litex.build.sim import SimPlatform, sim_build_args, sim_build_argdict
 from litex.build.sim.config import SimConfig
-from litex.build.sim.verilator import verilator_build_args, verilator_build_argdict
 
 from litex.soc.integration.common import *
 from litex.soc.integration.soc_core import *
@@ -363,7 +362,7 @@ def generate_gtkw_savefile(builder, vns, trace_fst):
 def sim_args(parser):
     builder_args(parser)
     soc_core_args(parser)
-    verilator_build_args(parser)
+    sim_build_args(parser)
     parser.add_argument("--rom-init",             default=None,            help="ROM init file (.bin or .json).")
     parser.add_argument("--ram-init",             default=None,            help="RAM init file (.bin or .json).")
     parser.add_argument("--with-sdram",           action="store_true",     help="Enable SDRAM support.")
@@ -393,9 +392,9 @@ def main():
     sim_args(parser)
     args = parser.parse_args()
 
-    soc_kwargs             = soc_core_argdict(args)
-    builder_kwargs         = builder_argdict(args)
-    verilator_build_kwargs = verilator_build_argdict(args)
+    soc_kwargs       = soc_core_argdict(args)
+    builder_kwargs   = builder_argdict(args)
+    sim_build_kwargs = sim_build_argdict(args)
 
     sys_clk_freq = int(1e6)
     sim_config   = SimConfig()
@@ -484,7 +483,7 @@ def main():
         sim_config       = sim_config,
         interactive      = not args.non_interactive,
         pre_run_callback = pre_run_callback,
-        **verilator_build_kwargs,
+        **sim_build_kwargs,
     )
 
 if __name__ == "__main__":

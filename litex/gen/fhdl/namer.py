@@ -10,6 +10,19 @@ from itertools import combinations
 from migen.fhdl.structure import *
 
 
+def escape_identifier_name(name):
+    # not necessarily unique
+    ident = ""
+    if not ("a" <= name[0] <= "z") or ("A" <= name[0] <= "Z"):
+        name[0] = "_"
+    for c in name:
+        if ("0" <= c <= "9") or ("a" <= c <= "z") or ("A" <= c <= "Z") or (c in ("_", "$")):
+            ident += c
+        else:
+            ident += "_"
+    return ident
+
+
 class _Node:
     def __init__(self):
         self.signal_count = 0

@@ -140,13 +140,14 @@ def _build_sim(build_name, sources, threads, coverage, opt_level="O3", trace_fst
         cc_srcs.append("--cc " + filename + " ")
     build_script_contents = """\
 #!/usr/bin/env bash
+set -e -u -x -o pipefail
 rm -rf obj_dir/
 make -C . -f {} {} {} {} {} {}
 """.format(makefile,
-    "CC_SRCS=\"{}\"".format("".join(cc_srcs)),
-    "THREADS={}".format(threads) if int(threads) > 1 else "",
+    f"CC_SRCS=\"{''.join(cc_srcs)}\"",
+    f"THREADS={threads}" if int(threads) > 1 else "",
     "COVERAGE=1" if coverage else "",
-    "OPT_LEVEL={}".format(opt_level),
+    f"OPT_LEVEL={opt_level}",
     "TRACE_FST=1" if trace_fst else "",
     )
     build_script_file = "build_" + build_name + ".sh"
@@ -216,6 +217,9 @@ class SimVerilatorToolchain:
         os.makedirs(build_dir, exist_ok=True)
         cwd = os.getcwd()
         os.chdir(build_dir)
+
+        if build_name != "sim":
+            raise ValueError("Verilator build_name must be 'sim'.")
 
         if build:
             # Finalize design

@@ -90,6 +90,13 @@ def _run_sim(build_name, as_root=False, interactive=True):
 
 
 class SimIcarusToolchain:
+    def _add_clockers(self, soc, sim_config):
+        print(f"vars(soc): {vars(soc)}")
+        for mod in sim_config.modules:
+            if mod["module"] != "clocker":
+                continue
+
+
     def build(self, platform, fragment,
             build_dir        = "build",
             build_name       = "sim_iverilog",
@@ -117,6 +124,7 @@ class SimIcarusToolchain:
             build_name += "_iverilog"
 
         if build:
+            self._add_clockers(fragment, sim_config)
             # Finalize design
             if not isinstance(fragment, _Fragment):
                 fragment = fragment.get_fragment()

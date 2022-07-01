@@ -14,7 +14,7 @@ from migen.fhdl.structure import _Fragment
 from litex import get_data_mod
 from litex.build import tools
 from litex.build.generic_platform import *
-
+from litex.build.sim.common import SimClocker
 
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
@@ -28,8 +28,8 @@ def _generate_sim_config(config):
     tools.write_to_file("sim_config.js", content)
 
 
-def _build_sim(build_name, sources, coverage, opt_level="O3", trace_fst=False):
-    makefile = os.path.join(core_directory, 'Makefile')
+def _build_sim(build_name, sources, trace_fst=False):
+    makefile = os.path.join(core_directory, 'Makefile.iverilog')
     cc_srcs = []
     for filename, language, library, *copy in sources:
         cc_srcs.append("--cc " + filename + " ")
@@ -37,12 +37,16 @@ def _build_sim(build_name, sources, coverage, opt_level="O3", trace_fst=False):
 #!/usr/bin/env bash
 set -e -u -x -o pipefail
 rm -rf obj_dir/
-make -C . -f {} {} {} {} {}
-""".format(makefile,
+make -C . -f {} {} {}
+iverilog -o {} {}
+""".format(
+    # make
+    makefile,
     f"CC_SRCS=\"{''.join(cc_srcs)}\"",
-    "COVERAGE=1" if coverage else "",
-    f"OPT_LEVEL={opt_level}",
     "TRACE_FST=1" if trace_fst else "",
+    # iverilog
+    build_name,
+    " ".join([s[0] for s in sources])
     )
     build_script_file = "build_" + build_name + ".sh"
     tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
@@ -69,7 +73,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += "obj_dir/Vsim\n"
+    run_script_contents += f"./{build_name}\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
@@ -163,6 +167,9 @@ def iverilog_build_args(parser):
     toolchain_group.add_argument("--trace-fst",    action="store_true", help="Enable FST tracing.")
     toolchain_group.add_argument("--trace-start",  default="0",         help="Time to start tracing (ps).")
     toolchain_group.add_argument("--trace-end",    default="-1",        help="Time to end tracing (ps).")
+    toolchain_group.add_argument("--non-interactive", dest="interactive", action="store_false",
+        help="Run simulation without user input.")
+
 
 def iverilog_build_argdict(args):
     return {
@@ -170,4 +177,5 @@ def iverilog_build_argdict(args):
         "trace_fst"   : args.trace_fst,
         "trace_start" : int(float(args.trace_start)),
         "trace_end"   : int(float(args.trace_end)),
+        "interactive" : args.interactive
     }

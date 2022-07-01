@@ -1,3 +1,5 @@
+import os
+
 from migen import *
 from migen.fhdl.specials import Special
 from migen.genlib.resetsync import AsyncResetSynchronizer
@@ -60,3 +62,22 @@ sim_special_overrides = {
     DDROutput              : SimDDROutput,
     DDRInput               : SimDDRInput,
 }
+
+
+# Clocking (for non-Verilator simulations)
+
+class SimClocker(Module):
+    def __init__(self, clk_sig, clk_freq):
+        self.mod_name = f"sim_clocker_{int(clk_freq):_}_hz"
+        sig_name = clk_sig.name if clk_sig.name else clk_sig.backtrace[-1][0]
+        name = f"sim_clocker_{sig_name}"
+        self.specials += Instance(self.mod_name, name=name, o_clk=clk_sig)
+
+    def do_finalize(self):
+        super().do_finalize()
+        verilog_filename = os.path.join(self.platform.output_dir, "gateware", self.mod_name + ".v")
+        with open(verilog_filename, "w") as v:
+            v.write("""\
+hello
+            """)
+        

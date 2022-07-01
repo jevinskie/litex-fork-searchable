@@ -282,6 +282,8 @@ def verilator_build_args(parser):
     toolchain_group.add_argument("--trace-start",  default="0",         help="Time to start tracing (ps).")
     toolchain_group.add_argument("--trace-end",    default="-1",        help="Time to end tracing (ps).")
     toolchain_group.add_argument("--opt-level",    default="O3",        help="Compilation optimization level.")
+    toolchain_group.add_argument("--non-interactive", dest="interactive", action="store_false",
+        help="Run simulation without user input.")
 
 def verilator_build_argdict(args):
     return {
@@ -290,5 +292,6 @@ def verilator_build_argdict(args):
         "trace_fst"   : args.trace_fst,
         "trace_start" : int(float(args.trace_start)),
         "trace_end"   : int(float(args.trace_end)),
-        "opt_level"   : args.opt_level
+        "opt_level"   : args.opt_level,
+        "interactive" : args.interactive
     }

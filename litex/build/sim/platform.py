@@ -19,12 +19,12 @@ from litex.build.sim.verilator import verilator_build_args, verilator_build_argd
 from litex.build.sim.iverilog import iverilog_build_args, iverilog_build_argdict
 
 
-def sim_build_args(parser: argparse.ArgumentParser):
+def sim_build_args(parser):
     tc_arg_name = "--sim-toolchain"
     tc_arg_kws = dict(default="verilator", help="Simulation toolchain")
+    parser.add_argument(tc_arg_name, **tc_arg_kws)
     stub_parser = argparse.ArgumentParser(parser.description, add_help=False)
     stub_parser.add_argument(tc_arg_name, **tc_arg_kws)
-    parser.add_argument(tc_arg_name, **tc_arg_kws)
     stub_args = stub_parser.parse_known_args()[0]
     try:
         {

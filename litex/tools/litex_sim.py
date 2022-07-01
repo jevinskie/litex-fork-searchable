@@ -384,7 +384,6 @@ def sim_args(parser):
     parser.add_argument("--with-gpio",            action="store_true",     help="Enable Tristate GPIO (32 pins).")
     parser.add_argument("--sim-debug",            action="store_true",     help="Add simulation debugging modules.")
     parser.add_argument("--gtkwave-savefile",     action="store_true",     help="Generate GTKWave savefile.")
-    parser.add_argument("--non-interactive",      action="store_true",     help="Run simulation without user input.")
 
 def main():
     from litex.soc.integration.soc import LiteXSoCArgumentParser

@@ -169,8 +169,9 @@ int litex_sim_sort_session()
 
 static struct event *ev;
 
-static void cb(int sock, short which, void *arg)
+static void cb(evutil_socket_t sock, short which, void *arg)
 {
+  (void)sock, (void)which; // unused
   struct session_list_s *s;
   void *vsim=arg;
   struct timeval tv;

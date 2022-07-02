@@ -10,13 +10,13 @@ $(TOPLEVEL): $(VERILOG_SRCS)
 	iverilog $(IVERILOG_FLAGS) -o $@ $^
 
 $(OBJ_DIR)/sim.o: $(CORE_DIR)/sim.c | mkdir
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
 litex.vpi: $(OBJ_DIR)/sim.o $(OBJ_DIR)/vpi.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^
+	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
 
 clean:

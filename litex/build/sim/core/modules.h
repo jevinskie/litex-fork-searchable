@@ -1,7 +1,10 @@
 /* Copyright (C) 2017 LambdaConcept */
 
-#ifndef __MODULE_H_
-#define __MODULE_H_
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -21,7 +24,7 @@ struct interface_s {
 struct module_s {
   char *name;
   struct interface_s *iface;
-  size_t niface;
+  int niface;
   char tickfirst;
   char *args;
   struct module_s *next;
@@ -72,4 +75,6 @@ static inline clk_edge_t clk_edge(clk_edge_state_t *edge_state, int new_clk) {
   return edge;
 }
 
+#ifdef __cplusplus
+} // extern "C"
 #endif

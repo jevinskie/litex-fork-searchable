@@ -1,7 +1,6 @@
 /* Copyright (C) 2017 LambdaConcept */
 
-#ifndef __ERROR_H_
-#define __ERROR_H_
+#pragma once
 
 #define RC_OK 0
 #define RC_ERROR -1
@@ -11,5 +10,3 @@
 #define RC_JSMISSINGKEY -5
 
 #define eprintf(format, ...) fprintf (stderr, "%s:%d "format, __FILE__, __LINE__,  ##__VA_ARGS__)
-
-#endif

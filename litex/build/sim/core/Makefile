@@ -1,5 +1,5 @@
-MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-include $(MAKEFILE_DIR)/Makefile.common
+CORE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+include $(CORE_DIR)/Makefile.common
 
 SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
 

@@ -209,7 +209,11 @@ static void cb(int sock, short which, void *arg)
   }
 }
 
+#ifndef USE_LITEX_MAIN
 int main(int argc, char *argv[])
+#else
+int litex_sim_main(int argc, char *argv[])
+#endif
 {
   void *vsim=NULL;
   struct timeval tv;

@@ -167,7 +167,7 @@ int litex_sim_sort_session()
   return RC_OK;
 }
 
-struct event *ev;
+static struct event *ev;
 
 static void cb(int sock, short which, void *arg)
 {

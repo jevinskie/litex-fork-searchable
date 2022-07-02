@@ -329,6 +329,8 @@ class Builder:
             _create_dir(self.software_dir, remove_if_exists=software_full_rebuild)
 
         # Finalize the SoC.
+        if hasattr(self.soc.platform.toolchain, 'prefinalize'):
+            self.soc.platform.toolchain.prefinalize(self, verbose=verbose, **kwargs)
         self.soc.finalize()
 
         # Generate Software Includes/Files.

@@ -1,3 +1,4 @@
+import importlib.resources
 import os
 
 from migen import *
@@ -67,17 +68,15 @@ sim_special_overrides = {
 # Clocking (for non-Verilator simulations)
 
 class SimClocker(Module):
-    def __init__(self, clk_sig, clk_freq):
-        self.mod_name = f"sim_clocker_{int(clk_freq):_}_hz"
-        sig_name = clk_sig.name if clk_sig.name else clk_sig.backtrace[-1][0]
-        name = f"sim_clocker_{sig_name}"
-        self.specials += Instance(self.mod_name, name=name, o_clk=clk_sig)
+    def __init__(self, platform, clk_sig, freq_hz, phase_deg):
+        self.platform = platform
+        self.specials += Instance("sim_clocker", name=f"sim_clocker_{clk_sig.cd}_clk",
+            o_clk=clk_sig,
+            p_freq_hz=freq_hz,
+            p_phase_deg=phase_deg)
 
     def do_finalize(self):
         super().do_finalize()
-        verilog_filename = os.path.join(self.platform.output_dir, "gateware", self.mod_name + ".v")
-        with open(verilog_filename, "w") as v:
-            v.write("""\
-hello
-            """)
+        vpath = importlib.resources.files(__package__) / "verilog" / "sim_clocker.v"
+        self.platform.add_source(vpath)
         

@@ -4,13 +4,14 @@
 # Copyright (c) 2022 Jevin Sweval <jevinsweval@>
 # SPDX-License-Identifier: BSD-2-Clause
 
+from distutils.command.build import build
 import logging
 import os
 import sys
 import subprocess
 from shutil import which
 
-from migen.fhdl.structure import _Fragment
+from migen.fhdl.structure import _Fragment, ClockSignal
 from litex import get_data_mod
 from litex.build import tools
 from litex.build.generic_platform import *
@@ -91,11 +92,24 @@ def _run_sim(build_name, as_root=False, interactive=True):
 
 class SimIcarusToolchain:
     def _add_clockers(self, soc, sim_config):
-        print(f"vars(soc): {vars(soc)}")
+        clks = {}
+        print(f"mods: {sim_config.modules}")
+        # print(f"vars(soc): {vars(soc)}")
         for mod in sim_config.modules:
             if mod["module"] != "clocker":
                 continue
+            clks[mod["interface"][0].removesuffix("_clk")] = mod["args"]
 
+        for cd, params in clks.items():
+            soc.submodules += SimClocker(soc.platform, ClockSignal(cd), params["freq_hz"], params["phase_deg"])
+
+        print(f"clks: {clks}")
+        print(f"fin: {soc.finalized}")
+
+    def prefinalize(self, builder, verbose=False, **kwargs):
+        print(f"builder: {builder}")
+        print(f"kwargs: {kwargs}")
+        self._add_clockers(builder.soc, kwargs["sim_config"])
 
     def build(self, platform, fragment,
             build_dir        = "build",

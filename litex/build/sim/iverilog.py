@@ -28,8 +28,26 @@ def _generate_sim_config(config):
     content = config.get_json()
     tools.write_to_file("sim_config.js", content)
 
+def _generate_sim_variables(include_paths, extra_mods, extra_mods_path):
+    tapcfg_dir = get_data_mod("misc", "tapcfg").data_location
+    include = ""
+    for path in include_paths:
+        include += "-I"+path+" "
+    content = """\
+SRC_DIR = {}
+INC_DIR = {}
+TAPCFG_DIRECTORY = {}
+""".format(core_directory, include, tapcfg_dir)
 
-def _build_sim(build_name, sources, trace_fst=False):
+    if extra_mods:
+        modlist = " ".join(extra_mods)
+        content += "EXTRA_MOD_LIST = " + modlist + "\n"
+        content += "EXTRA_MOD_BASE_DIR = " + extra_mods_path + "\n"
+        tools.write_to_file(extra_mods_path + "/variables.mak", content)
+
+    tools.write_to_file("variables.mak", content)
+
+def _build_sim(build_name, sources, opt_level, trace_fst=False, iverilog_flags=""):
     makefile = os.path.join(core_directory, 'Makefile.iverilog')
     cc_srcs = []
     for filename, language, library, *copy in sources:
@@ -38,16 +56,13 @@ def _build_sim(build_name, sources, trace_fst=False):
 #!/usr/bin/env bash
 set -e -u -x -o pipefail
 rm -rf obj_dir/
-make -C . -f {} {} {}
-iverilog -o {} {}
+make -C . -f {} {} {} {} {}
 """.format(
-    # make
-    makefile,
-    f"CC_SRCS=\"{''.join(cc_srcs)}\"",
-    "TRACE_FST=1" if trace_fst else "",
-    # iverilog
-    build_name,
-    " ".join([s[0] for s in sources])
+        makefile,
+        f"VERILOG_SRCS=\"{' '.join([s[0] for s in sources])}\"",
+        f"OPT_LEVEL={opt_level}",
+        f"IVERILOG_FLAGS=\"{iverilog_flags}\"",
+        f"TOPLEVEL={build_name}",
     )
     build_script_file = "build_" + build_name + ".sh"
     tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
@@ -112,6 +127,7 @@ class SimIcarusToolchain:
             run              = True,
             verbose          = False,
             sim_config       = None,
+            opt_level        = "O3",
             trace            = False,
             trace_fst        = False,
             trace_start      = 0,
@@ -147,12 +163,16 @@ class SimIcarusToolchain:
             v_output.write(v_file)
             platform.add_source(v_file)
 
+            _generate_sim_variables(platform.verilog_include_paths,
+                                    extra_mods,
+                                    extra_mods_path)
+
             # Generate sim config
             if sim_config:
                 _generate_sim_config(sim_config)
 
             # Build
-            _build_sim(build_name, platform.sources, trace_fst)
+            _build_sim(build_name, platform.sources, opt_level, trace_fst=trace_fst)
 
         # Run
         if run:
@@ -182,6 +202,7 @@ def iverilog_build_args(parser):
     toolchain_group.add_argument("--trace-fst",    action="store_true", help="Enable FST tracing.")
     toolchain_group.add_argument("--trace-start",  default="0",         help="Time to start tracing (ps).")
     toolchain_group.add_argument("--trace-end",    default="-1",        help="Time to end tracing (ps).")
+    toolchain_group.add_argument("--opt-level",    default="O3",        help="Compilation optimization level.")
     toolchain_group.add_argument("--non-interactive", dest="interactive", action="store_false",
         help="Run simulation without user input.")
 
@@ -192,5 +213,6 @@ def iverilog_build_argdict(args):
         "trace_fst"   : args.trace_fst,
         "trace_start" : int(float(args.trace_start)),
         "trace_end"   : int(float(args.trace_end)),
+        "opt_level"   : args.opt_level,
         "interactive" : args.interactive
     }

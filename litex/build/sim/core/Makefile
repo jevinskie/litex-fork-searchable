@@ -1,35 +1,11 @@
-include variables.mak
-UNAME_S := $(shell uname -s)
+MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+include $(MAKEFILE_DIR)/Makefile.common
 
-ifeq ($(UNAME_S),Darwin)
-	CFLAGS += -I/usr/local/include/
-	LDFLAGS += -L/usr/local/lib
-	LDFLAGS += -lpthread -ljson-c -lz -lm -lstdc++ -ldl -levent
-else
-	CC ?= gcc
-	CFLAGS += -ggdb
-	LDFLAGS += -lpthread -Wl,--no-as-needed -ljson-c -lz -lm -lstdc++ -Wl,--no-as-needed -ldl -levent
-endif
-
-CFLAGS += -Wall -$(OPT_LEVEL) $(if $(COVERAGE), -DVM_COVERAGE) $(if $(TRACE_FST), -DTRACE_FST)
+SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
 
 CC_SRCS ?= "--cc sim.v"
 
-SRC_DIR ?= .
-INC_DIR ?= .
-MOD_DIR = $(SRC_DIR)/modules
-export OBJ_DIR = $(abspath obj_dir)
-
-SRCS_SIM_ABSPATH = $(wildcard $(SRC_DIR)/*.c)
-SRCS_SIM = $(notdir $(SRCS_SIM_ABSPATH))
-SRCS_SIM := $(filter-out litex_privesc.c,$(SRCS_SIM))
-SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
-OBJS_SIM = $(SRCS_SIM:.c=.o)
-
 all: modules sim
-
-mkdir:
-	mkdir -p $(OBJ_DIR)
 
 $(OBJS_SIM): %.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) -c $(CFLAGS) -o $(OBJ_DIR)/$@ $<
@@ -56,11 +32,6 @@ sim: $(OBJS_SIM) | mkdir
 		-Wno-COMBDLY \
 		-Wno-CASEINCOMPLETE
 	make -j -C $(OBJ_DIR) -f Vsim.mk Vsim
-
-.PHONY: modules
-modules:
-	mkdir -p modules
-	$(MAKE) -C modules -f $(MOD_DIR)/Makefile
 
 .PHONY: clean
 clean:

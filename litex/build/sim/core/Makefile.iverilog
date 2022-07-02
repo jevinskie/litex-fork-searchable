@@ -1,2 +1,10 @@
-all:
+MAKEFILE_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+include $(MAKEFILE_DIR)/Makefile.common
 
+all: $(TOPLEVEL) modules
+
+$(TOPLEVEL): $(VERILOG_SRCS)
+	iverilog $(IVERILOG_FLAGS) -o $@ $^
+
+clean:
+	rm -rf $(OBJ_DIR) $(TOPLEVEL)

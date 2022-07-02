@@ -1,0 +1,36 @@
+include variables.mak
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+	CFLAGS += -I/usr/local/include/
+	LDFLAGS += -L/usr/local/lib
+	CFLAGS += -g
+	LDFLAGS += -lpthread -ljson-c -lz -lm -lstdc++ -ldl -levent
+else
+	CC ?= gcc
+	CFLAGS += -ggdb
+	LDFLAGS += -lpthread -Wl,--no-as-needed -ljson-c -lz -lm -lstdc++ -Wl,--no-as-needed -ldl -levent
+endif
+
+CFLAGS += -Wall -$(OPT_LEVEL) $(if $(COVERAGE), -DVM_COVERAGE) $(if $(TRACE_FST), -DTRACE_FST)
+
+SRC_DIR ?= .
+INC_DIR ?= .
+MOD_DIR = $(SRC_DIR)/modules
+export OBJ_DIR = $(abspath obj_dir)
+
+SRCS_SIM_ABSPATH = $(wildcard $(SRC_DIR)/*.c)
+SRCS_SIM = $(notdir $(SRCS_SIM_ABSPATH))
+SRCS_SIM := $(filter-out litex_privesc.c,$(SRCS_SIM))
+SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
+OBJS_SIM = $(SRCS_SIM:.c=.o)
+
+.DEFAULT_GOAL := all
+
+mkdir:
+	mkdir -p $(OBJ_DIR)
+
+.PHONY: modules
+modules:
+	mkdir -p modules
+	$(MAKE) -C modules -f $(MOD_DIR)/Makefile

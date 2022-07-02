@@ -1,6 +1,13 @@
 CORE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(CORE_DIR)/Makefile.common
 
+
+ifeq ($(UNAME_S),Darwin)
+	CFLAGS += -I/usr/local/include/iverilog -I/opt/homebrew/include/iverilog
+else
+	CFLAGS += -I/usr/include/iverilog
+endif
+
 CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC
 CXXFLAGS := $(CFLAGS) -std=c++11
 

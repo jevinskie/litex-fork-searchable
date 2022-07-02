@@ -104,7 +104,7 @@ static int serial2tcp_start(void *b)
   return RC_OK;
 }
 
-void read_handler(int fd, short event, void *arg)
+static void read_handler(int fd, short event, void *arg)
 {
   struct session_s *s = (struct session_s*)arg;
   char buffer[1024];

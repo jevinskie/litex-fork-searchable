@@ -12,9 +12,9 @@ localparam phase_delay = clk_per * (phase_deg / 360.0);
 
 initial begin
     clk <= 0;
-    #phase_delay;
+    #(clk_per / 2.0 + phase_delay);
     forever begin
-        #(clk_per/2.0);
+        #(clk_per / 2.0);
         clk <= ~clk;
     end
 end

@@ -141,7 +141,7 @@ static int serial2framed_tcp_start(void *b)
   return RC_OK;
 }
 
-void read_handler(int fd, short event, void *arg)
+static void read_handler(int fd, short event, void *arg)
 {
   struct session_s *s = (struct session_s *)arg;
   struct tcp_packet_s *tp, *ttp;

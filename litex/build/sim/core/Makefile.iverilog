@@ -16,7 +16,7 @@ $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 litex.vpi: $(OBJ_DIR)/sim.o $(OBJ_DIR)/vpi.o
-	$(CXX) $(CXXFLAGS) -shared -o $@ $^ 
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^
 
 
 clean:

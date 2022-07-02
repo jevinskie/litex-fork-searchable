@@ -93,22 +93,15 @@ def _run_sim(build_name, as_root=False, interactive=True):
 class SimIcarusToolchain:
     def _add_clockers(self, soc, sim_config):
         clks = {}
-        print(f"mods: {sim_config.modules}")
-        # print(f"vars(soc): {vars(soc)}")
         for mod in sim_config.modules:
             if mod["module"] != "clocker":
                 continue
             clks[mod["interface"][0].removesuffix("_clk")] = mod["args"]
 
         for cd, params in clks.items():
-            soc.submodules += SimClocker(soc.platform, ClockSignal(cd), params["freq_hz"], params["phase_deg"])
-
-        print(f"clks: {clks}")
-        print(f"fin: {soc.finalized}")
+            soc.submodules += SimClocker(soc.platform, cd, soc.platform.lookup_request(f"{cd}_clk"), params["freq_hz"], params["phase_deg"])
 
     def prefinalize(self, builder, verbose=False, **kwargs):
-        print(f"builder: {builder}")
-        print(f"kwargs: {kwargs}")
         self._add_clockers(builder.soc, kwargs["sim_config"])
 
     def build(self, platform, fragment,

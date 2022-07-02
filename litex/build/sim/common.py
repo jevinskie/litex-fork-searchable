@@ -65,15 +65,21 @@ sim_special_overrides = {
 }
 
 
-# Clocking (for non-Verilator simulations)
+# Clocking (for non-Verilator simulations) ---------------------------------------------------------
 
 class SimClocker(Module):
-    def __init__(self, platform, clk_sig, freq_hz, phase_deg):
+    def __init__(self, platform, cd_name, clk_sig, freq_hz, phase_deg):
         self.platform = platform
-        self.specials += Instance("sim_clocker", name=f"sim_clocker_{clk_sig.cd}_clk",
+        if isinstance(clk_sig, ClockSignal):
+            name = clk_sig.cd
+        else:
+            assert cd_name
+            name = cd_name
+        self.specials += Instance("sim_clocker", name=f"sim_clocker_{name}_clk",
             o_clk=clk_sig,
             p_freq_hz=freq_hz,
-            p_phase_deg=phase_deg)
+            p_phase_deg=phase_deg
+        )
 
     def do_finalize(self):
         super().do_finalize()

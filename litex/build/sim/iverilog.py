@@ -28,16 +28,17 @@ def _generate_sim_config(config):
     content = config.get_json()
     tools.write_to_file("sim_config.js", content)
 
-def _generate_sim_variables(include_paths, extra_mods, extra_mods_path):
+def _generate_sim_variables(build_name, include_paths, extra_mods, extra_mods_path):
     tapcfg_dir = get_data_mod("misc", "tapcfg").data_location
     include = ""
     for path in include_paths:
         include += "-I"+path+" "
     content = """\
+TOPLEVEL = {}
 SRC_DIR = {}
 INC_DIR = {}
 TAPCFG_DIRECTORY = {}
-""".format(core_directory, include, tapcfg_dir)
+""".format(build_name, core_directory, include, tapcfg_dir)
 
     if extra_mods:
         modlist = " ".join(extra_mods)
@@ -56,13 +57,12 @@ def _build_sim(build_name, sources, opt_level, trace_fst=False, iverilog_flags="
 #!/usr/bin/env bash
 set -e -u -x -o pipefail
 rm -rf obj_dir/
-make -C . -f {} {} {} {} {}
+make -C . -f {} {} {} {}
 """.format(
         makefile,
         f"VERILOG_SRCS=\"{' '.join([s[0] for s in sources])}\"",
         f"OPT_LEVEL={opt_level}",
         f"IVERILOG_FLAGS=\"{iverilog_flags}\"",
-        f"TOPLEVEL={build_name}",
     )
     build_script_file = "build_" + build_name + ".sh"
     tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
@@ -163,7 +163,8 @@ class SimIcarusToolchain:
             v_output.write(v_file)
             platform.add_source(v_file)
 
-            _generate_sim_variables(platform.verilog_include_paths,
+            _generate_sim_variables(build_name,
+                                    platform.verilog_include_paths,
                                     extra_mods,
                                     extra_mods_path)
 

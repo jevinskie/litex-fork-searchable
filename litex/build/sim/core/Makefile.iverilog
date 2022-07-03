@@ -1,6 +1,7 @@
 CORE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(CORE_DIR)/Makefile.common
 
+OBJS_SIM_PATHS := $(addprefix $(OBJ_DIR)/,$(OBJS_SIM))
 
 ifeq ($(UNAME_S),Darwin)
 	CFLAGS += -I/usr/local/include/iverilog -I/opt/homebrew/include/iverilog
@@ -8,7 +9,7 @@ else
 	CFLAGS += -I/usr/include/iverilog
 endif
 
-CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC
+CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
@@ -17,13 +18,13 @@ all: $(TOPLEVEL) modules litex.vpi
 $(TOPLEVEL): $(VERILOG_SRCS) litex.vpi
 	iverilog $(IVERILOG_FLAGS) -L . -m litex -o $@ $(VERILOG_SRCS)
 
-$(OBJ_DIR)/sim.o: $(CORE_DIR)/sim.c | mkdir
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
 	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
-litex.vpi: $(OBJ_DIR)/sim.o $(OBJ_DIR)/vpi.o
+litex.vpi: $(OBJ_DIR)/vpi.o $(OBJS_SIM_PATHS)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
 

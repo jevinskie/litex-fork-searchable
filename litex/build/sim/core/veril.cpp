@@ -29,7 +29,7 @@ extern "C" void litex_sim_eval(void *vsim, uint64_t time_ps)
   main_time = time_ps;
 }
 
-extern "C" void litex_sim_init_cmdargs(int argc, char *argv[])
+extern "C" void litex_sim_init_cmdargs(int argc, const char *argv[])
 {
   Verilated::commandArgs(argc, argv);
 }
@@ -87,8 +87,3 @@ extern "C" void litex_sim_coverage_dump()
   VerilatedCov::write("sim.cov");
 }
 #endif
-
-double sc_time_stamp()
-{
-  return main_time;
-}

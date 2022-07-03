@@ -211,9 +211,9 @@ static void cb(evutil_socket_t sock, short which, void *arg)
 }
 
 #ifndef USE_LITEX_MAIN
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 #else
-int litex_sim_main(int argc, char *argv[])
+int litex_sim_main(int argc, const char *argv[])
 #endif
 {
   void *vsim=NULL;

@@ -16,7 +16,8 @@ static int file_to_js(char *filename, json_object **obj)
   FILE *in=NULL;
   int linenum=0;
   char *lineptr=NULL;
-  size_t len, len2;
+  size_t len;
+  ssize_t len2;
 
   if(!filename || !obj)
   {

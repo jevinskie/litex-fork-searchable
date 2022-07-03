@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from distutils.command.build import build
+import enum
 import logging
 import os
 import sys
@@ -76,8 +77,9 @@ def _compile_sim(build_name, verbose):
     output = output.decode('utf-8')
     if p.returncode != 0:
         error_messages = []
-        for l in output.splitlines():
-            if verbose or "error" in l.lower():
+        lines = output.splitlines()
+        for i, l in enumerate(lines):
+            if verbose or "error" in l.lower() or i >= len(lines) - 25:
                 error_messages.append(l)
         raise OSError("Subprocess failed with {}\n{}".format(p.returncode, "\n".join(error_messages)))
     if verbose:

@@ -7,12 +7,12 @@
 
 struct session_s {
   char *clk;
-  char *name;
+  const char *name;
   uint32_t freq_hz;
   uint16_t phase_deg;
 };
 
-static int litex_sim_module_pads_get( struct pad_s *pads, char *name, void **signal)
+static int litex_sim_module_pads_get( struct pad_s *pads, const char *name, void **signal)
 {
   int ret = RC_OK;
   void *sig=NULL;

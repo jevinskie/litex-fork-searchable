@@ -18,7 +18,7 @@ from litex.build import tools
 from litex.build.generic_platform import *
 from litex.build.sim.common import SimClocker
 from litex.build.sim.verilator import _generate_sim_h
-from litex.build.sim.vpi import generate_vpi_init_cpp
+from litex.build.sim.vpi import generate_vpi_init_generated_cpp
 
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
@@ -165,7 +165,7 @@ class SimIcarusToolchain:
 
             # Generate cpp header/main/variables
             _generate_sim_h(platform)
-            generate_vpi_init_cpp(build_name, platform)
+            generate_vpi_init_generated_cpp(build_name, platform)
 
             _generate_sim_variables(build_name,
                                     platform.sources,

@@ -87,3 +87,8 @@ extern "C" void litex_sim_coverage_dump()
   VerilatedCov::write("sim.cov");
 }
 #endif
+
+double sc_time_stamp()
+{
+  return main_time;
+}

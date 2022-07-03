@@ -24,7 +24,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
 	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/vpi_init.o: vpi.cpp | mkdir
+$(OBJ_DIR)/vpi_init.o: vpi_init.cpp | mkdir
 	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
 litex.vpi: $(OBJ_DIR)/vpi.o $(OBJ_DIR)/vpi_init.o $(OBJS_SIM_PATHS)

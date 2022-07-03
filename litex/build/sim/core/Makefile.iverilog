@@ -9,12 +9,13 @@ else
 endif
 
 CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC
+# CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11
 
 all: $(TOPLEVEL) modules litex.vpi
 
-$(TOPLEVEL): $(VERILOG_SRCS)
-	iverilog $(IVERILOG_FLAGS) -o $@ $^
+$(TOPLEVEL): $(VERILOG_SRCS) litex.vpi
+	iverilog $(IVERILOG_FLAGS) -L . -m litex -o $@ $(VERILOG_SRCS)
 
 $(OBJ_DIR)/sim.o: $(CORE_DIR)/sim.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^
@@ -27,4 +28,4 @@ litex.vpi: $(OBJ_DIR)/sim.o $(OBJ_DIR)/vpi.o
 
 
 clean:
-	rm -rf $(OBJ_DIR) $(TOPLEVEL)
+	rm -rf $(OBJ_DIR) $(TOPLEVEL) litex.vpi

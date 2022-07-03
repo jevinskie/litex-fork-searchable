@@ -14,7 +14,9 @@ extern "C" int litex_sim_main(int argc, const char *argv[]);
 
 struct Vsim {
     uint8_t foo;
-    void eval(){};
+    void eval(){
+        printf(".");
+    }
 };
 
 uint64_t main_time = 0;

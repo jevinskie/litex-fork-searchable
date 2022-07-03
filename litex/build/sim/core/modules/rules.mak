@@ -8,7 +8,7 @@ ifeq ($(UNAME_S),Darwin)
 else
     CFLAGS += -Wall -O0 -ggdb -fPIC -Werror
 endif
-LDFLAGS += -levent -shared -fPIC
+LDFLAGS += -ljson-c -levent -shared -fPIC
 
 MOD_SRC_DIR=$(SRC_DIR)/modules/$(MOD)
 EXTRA_MOD_SRC_DIR=$(EXTRA_MOD_BASE_DIR)/$(MOD)
@@ -23,9 +23,9 @@ all: $(MOD).so
 
 %.so: %.o
 ifeq ($(UNAME_S),Darwin)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 else
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $<
+	$(CC) -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 endif
 
 .PHONY: clean

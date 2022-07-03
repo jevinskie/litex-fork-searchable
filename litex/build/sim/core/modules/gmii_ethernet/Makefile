@@ -8,9 +8,9 @@ OBJS = $(MOD).o tapcfg.o taplog.o
 
 $(MOD).so: $(OBJS)
 ifeq ($(UNAME_S),Darwin)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 else
-	$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^
+	$(CC) -Wl,-soname,$@ -o $@ $^ $(LDFLAGS)
 endif
 
 tapcfg.o: $(TAPCFG_DIRECTORY)/src/lib/tapcfg.c

@@ -28,17 +28,21 @@ def _generate_sim_config(config):
     content = config.get_json()
     tools.write_to_file("sim_config.js", content)
 
-def _generate_sim_variables(build_name, include_paths, extra_mods, extra_mods_path):
+def _generate_sim_variables(build_name, sources, include_paths,
+                            opt_level, extra_mods, extra_mods_path, iverilog_flags=""):
     tapcfg_dir = get_data_mod("misc", "tapcfg").data_location
     include = ""
     for path in include_paths:
         include += "-I"+path+" "
-    content = """\
-TOPLEVEL = {}
-SRC_DIR = {}
-INC_DIR = {}
-TAPCFG_DIRECTORY = {}
-""".format(build_name, core_directory, include, tapcfg_dir)
+    content = f"""\
+TOPLEVEL := {build_name}
+OPT_LEVEL ?= {opt_level}
+IVERILOG_FLAGS ?= {iverilog_flags}
+VERILOG_SRCS := {" ".join([s[0] for s in sources])}
+SRC_DIR := {core_directory}
+INC_DIR := {include}
+TAPCFG_DIRECTORY := {tapcfg_dir}
+"""
 
     if extra_mods:
         modlist = " ".join(extra_mods)
@@ -48,22 +52,14 @@ TAPCFG_DIRECTORY = {}
 
     tools.write_to_file("variables.mak", content)
 
-def _build_sim(build_name, sources, opt_level, trace_fst=False, iverilog_flags=""):
+def _build_sim(build_name):
     makefile = os.path.join(core_directory, 'Makefile.iverilog')
-    cc_srcs = []
-    for filename, language, library, *copy in sources:
-        cc_srcs.append("--cc " + filename + " ")
-    build_script_contents = """\
+    build_script_contents = f"""\
 #!/usr/bin/env bash
 set -e -u -x -o pipefail
 rm -rf obj_dir/
-make -C . -f {} {} {} {}
-""".format(
-        makefile,
-        f"VERILOG_SRCS=\"{' '.join([s[0] for s in sources])}\"",
-        f"OPT_LEVEL={opt_level}",
-        f"IVERILOG_FLAGS=\"{iverilog_flags}\"",
-    )
+make -C . -f {makefile} "$@"
+"""
     build_script_file = "build_" + build_name + ".sh"
     tools.write_to_file(build_script_file, build_script_contents, force_unix=True, chmod=0o755)
 
@@ -164,7 +160,9 @@ class SimIcarusToolchain:
             platform.add_source(v_file)
 
             _generate_sim_variables(build_name,
+                                    platform.sources,
                                     platform.verilog_include_paths,
+                                    opt_level,
                                     extra_mods,
                                     extra_mods_path)
 
@@ -173,7 +171,7 @@ class SimIcarusToolchain:
                 _generate_sim_config(sim_config)
 
             # Build
-            _build_sim(build_name, platform.sources, opt_level, trace_fst=trace_fst)
+            _build_sim(build_name)
 
         # Run
         if run:

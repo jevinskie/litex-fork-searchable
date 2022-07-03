@@ -15,6 +15,15 @@ def vpi_uint_ty(sigbits):
         return "uint32_t"
     raise ValueError(f"Can't get uint type for {sigbits} bits.")
 
+def vpi_ptr_tag(sigbits):
+    if 1 <= sigbits <= 8:
+        return "TAG_U8"
+    elif 9 <= sigbits <= 16:
+        return "TAG_U16"
+    elif 17 <= sigbits <= 32:
+        return "TAG_U32"
+    raise ValueError(f"Can't get pointer tag type for {sigbits} bits.")
+
 def _check_signal_bitwidth_compat(platform):
     for name, idx, siglist in platform.sim_requested:
         for signame, sigbits, topname in siglist:

@@ -11,11 +11,12 @@ import sys
 import subprocess
 from shutil import which
 
-from migen.fhdl.structure import _Fragment, ClockSignal
+from migen.fhdl.structure import _Fragment
 from litex import get_data_mod
 from litex.build import tools
 from litex.build.generic_platform import *
 from litex.build.sim.common import SimClocker
+from litex.build.sim.verilator import _generate_sim_h
 
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
@@ -27,6 +28,10 @@ _logger = logging.getLogger("Icarus")
 def _generate_sim_config(config):
     content = config.get_json()
     tools.write_to_file("sim_config.js", content)
+
+def _generate_vpi_init_cpp(build_name, platform):
+    tools.write_to_file("vpi_init.cpp", "")
+
 
 def _generate_sim_variables(build_name, sources, include_paths,
                             opt_level, extra_mods, extra_mods_path, iverilog_flags=""):
@@ -158,6 +163,10 @@ class SimIcarusToolchain:
             v_file = build_name + ".v"
             v_output.write(v_file)
             platform.add_source(v_file)
+
+            # Generate cpp header/main/variables
+            _generate_sim_h(platform)
+            _generate_vpi_init_cpp(build_name, platform)
 
             _generate_sim_variables(build_name,
                                     platform.sources,

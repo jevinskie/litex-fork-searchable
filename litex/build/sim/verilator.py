@@ -26,9 +26,9 @@ _logger = logging.getLogger("Verilator")
 def _generate_sim_h_struct(name, index, siglist):
     content = ''
 
-    content += 'struct pad_s {}{}[] = {{\n'.format(name, index)
+    content += f'struct pad_s {name}{index}[] = {{\n'
     for signame, sigbits, dummy in siglist:
-        content += '    {{ (char*)"{}", {}, NULL }},\n'.format(signame, sigbits)
+        content += f'    {{ "{signame}", {sigbits}, NULL }},\n'
     content += '    { NULL, 0, NULL }\n'
     content += '};\n\n'
 
@@ -37,20 +37,24 @@ def _generate_sim_h_struct(name, index, siglist):
 
 def _generate_sim_h(platform):
     content = """\
-#ifndef __SIM_CORE_H_
-#define __SIM_CORE_H_
+#pragma once
+
 #include "pads.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 """
     for args in platform.sim_requested:
         content += _generate_sim_h_struct(*args)
 
     content += """\
-#ifndef __cplusplus
 void litex_sim_init(void **out);
-#endif
 
-#endif /* __SIM_CORE_H_ */
+#ifdef __cplusplus
+} // extern "C"
+#endif
 """
     tools.write_to_file("sim_header.h", content)
 

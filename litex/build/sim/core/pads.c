@@ -8,7 +8,7 @@
 
 static struct pad_list_s *padlist=NULL;
 
-int litex_sim_register_pads(struct pad_s *pads, char *interface_name, int index)
+int litex_sim_register_pads(struct pad_s *pads, const char *interface_name, int index)
 {
   int ret = RC_OK;
 
@@ -58,7 +58,7 @@ out:
   return ret;
 }
 
-int litex_sim_pads_find(struct pad_list_s *first, char *name, int index, struct pad_list_s **found)
+int litex_sim_pads_find(struct pad_list_s *first, const char *name, int index, struct pad_list_s **found)
 {
   struct pad_list_s *list = NULL;
   int ret=RC_OK;

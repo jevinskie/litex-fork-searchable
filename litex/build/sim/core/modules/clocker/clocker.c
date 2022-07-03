@@ -85,9 +85,9 @@ out:
   return ret;
 }
 
-static int clocker_start()
+static int clocker_start(void *base)
 {
-  printf("[clocker] loaded\n");
+  printf("[clocker] loaded (%p)\n", base);
   return RC_OK;
 }
 

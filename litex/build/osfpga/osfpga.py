@@ -33,9 +33,7 @@ def _build_tcl(name, device, files, build_name, include_paths):
     tcl.append(f"create_design {build_name}")
 
     # Set Device.
-    # FIXME: Directly pass Devices instead of Macro when possible.
-    macro = {"test": "P1=10  P2=20"}[device]
-    tcl.append(f"set_macro {macro}")
+    tcl.append(f"target_device {device.upper()}")
 
     # Add Include Path.
     tcl.append("add_include_path ./")
@@ -96,10 +94,6 @@ class OSFPGAToolchain:
         v_file = build_name + ".v"
         v_output.write(v_file)
         platform.add_source(v_file)
-
-        # Copy .init files to work directory; FIXME.
-        os.makedirs(build_name, exist_ok=True)
-        os.system(f"cp *.init {build_name}")
 
         # Generate constraints file.
         # IOs.

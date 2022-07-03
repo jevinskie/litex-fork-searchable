@@ -88,7 +88,11 @@ git_repos = {
     "liteiclink":   GitRepo(url="https://github.com/enjoy-digital/", tag=True),
     "litescope":    GitRepo(url="https://github.com/enjoy-digital/", tag=True),
     "litejesd204b": GitRepo(url="https://github.com/enjoy-digital/", tag=True),
-    "litespi":      GitRepo(url="https://github.com/litex-hub/", tag=True),
+    "litespi":      GitRepo(url="https://github.com/litex-hub/",     tag=True),
+
+    # LiteX Misc Cores.
+    # -----------------
+    "valentyusb":         GitRepo(url="https://github.com/litex-hub/", branch="hw_cdc_eptri"),
 
     # LiteX Boards.
     # -------------
@@ -211,6 +215,8 @@ def litex_setup_init_repos(config="standard", tag=None, dev_mode=False):
                 options = "--recursive" if repo.clone == "recursive" else ""
                 ), shell=True)
             os.chdir(os.path.join(current_path, name))
+            # Use specific Branch.
+            subprocess.check_call("git checkout " + repo.branch, shell=True)
             # Use specific Tag (Optional).
             if repo.tag is not None:
                 # Priority to passed tag (if specified).
@@ -321,8 +327,8 @@ def gcc_toolchain_download(url, filename):
 # -----------------
 
 def riscv_gcc_toolchain_download():
-    base_url  = "https://static.dev.sifive.com/dev-tools/"
-    base_file = "riscv64-unknown-elf-gcc-8.3.0-2019.08.0-x86_64-"
+    base_url  = "https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.08/"
+    base_file = "riscv64-unknown-elf-gcc-10.1.0-2020.08.2-x86_64-"
 
     # Windows
     if (sys.platform.startswith("win") or sys.platform.startswith("cygwin")):

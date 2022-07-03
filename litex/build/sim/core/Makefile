@@ -1,8 +1,6 @@
 CORE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(CORE_DIR)/Makefile.common
 
-LDFLAGS += -lz
-
 SRCS_SIM_CPP = sim_init.cpp $(SRC_DIR)/veril.cpp
 
 CC_SRCS ?= "--cc sim.v"

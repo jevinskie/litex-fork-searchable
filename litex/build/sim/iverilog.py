@@ -18,6 +18,7 @@ from litex.build import tools
 from litex.build.generic_platform import *
 from litex.build.sim.common import SimClocker
 from litex.build.sim.verilator import _generate_sim_h
+from litex.build.sim.vpi import generate_vpi_init_cpp
 
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
@@ -29,10 +30,6 @@ _logger = logging.getLogger("Icarus")
 def _generate_sim_config(config):
     content = config.get_json()
     tools.write_to_file("sim_config.js", content)
-
-def _generate_vpi_init_cpp(build_name, platform):
-    tools.write_to_file("vpi_init.cpp", "")
-
 
 def _generate_sim_variables(build_name, sources, include_paths,
                             opt_level, extra_mods, extra_mods_path, iverilog_flags=""):
@@ -168,7 +165,7 @@ class SimIcarusToolchain:
 
             # Generate cpp header/main/variables
             _generate_sim_h(platform)
-            _generate_vpi_init_cpp(build_name, platform)
+            generate_vpi_init_cpp(build_name, platform)
 
             _generate_sim_variables(build_name,
                                     platform.sources,

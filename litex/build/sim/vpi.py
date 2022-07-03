@@ -6,7 +6,7 @@
 
 from litex.build import tools
 
-def vpi_uint_ty(sigbits):
+def _uint_ty(sigbits):
     if 1 <= sigbits <= 8:
         return "uint8_t"
     elif 9 <= sigbits <= 16:
@@ -14,15 +14,6 @@ def vpi_uint_ty(sigbits):
     elif 17 <= sigbits <= 32:
         return "uint32_t"
     raise ValueError(f"Can't get uint type for {sigbits} bits.")
-
-def vpi_ptr_tag(sigbits):
-    if 1 <= sigbits <= 8:
-        return "TAG_U8"
-    elif 9 <= sigbits <= 16:
-        return "TAG_U16"
-    elif 17 <= sigbits <= 32:
-        return "TAG_U32"
-    raise ValueError(f"Can't get pointer tag type for {sigbits} bits.")
 
 def _check_signal_bitwidth_compat(platform):
     for name, idx, siglist in platform.sim_requested:
@@ -33,8 +24,42 @@ def _check_signal_bitwidth_compat(platform):
                     f"module '{name}' signal '{signame}' is {sigbits} bits."
                 )
 
-def _register_cb(build_name, topname, indent=""):
-    txt = ""
+def _register_cb(build_name, name, idx, sigidx, topname, uint_ty, indent=""):
+    txt = f"""\
+const auto {topname}_hdl = vpi_handle_by_name("{build_name}.{topname}", nullptr);
+assert({topname}_hdl);
+s_cb_data {topname}_cbd{{
+    .reason    = cbValueChange,
+    .cb_rtn    = signal_{uint_ty}_change_cb,
+    .obj       = {topname}_hdl,
+    .time      = &time_rec,
+    .value     = &val_rec,
+    .user_data = (char *)&sig_{topname}_val
+}};
+const auto {topname}_cb = vpi_register_cb(&{topname}_cbd);
+assert({topname}_cb && vpi_free_object({topname}_cb) && vpi_free_object({topname}_hdl));
+{name}{idx}[{sigidx}].signal = &sig_{topname}_val;
+
+"""
+    return "\n".join([indent + l for l in txt.splitlines()]) + "\n"
+
+def _gen_register_cb_func(build_name, platform):
+    txt = """\
+static void register_signal_callbacks() {
+    s_vpi_time time_rec{.type = vpiSimTime};
+    s_vpi_value val_rec{.format = vpiIntVal};
+
+"""
+    for name, idx, siglist in platform.sim_requested:
+        idx_int = 0 if not idx else int(idx)
+        for sigidx, siginfo in enumerate(siglist):
+            signame, sigbits, topname = siginfo
+            txt += _register_cb(build_name, name, idx, sigidx, topname, _uint_ty(sigbits), indent=" " * 4)
+        txt += f"""\
+    assert(!litex_sim_register_pads({name}{idx}, "{name}", {idx_int}));
+
+"""
+    txt += "}\n"
     return txt
 
 def generate_vpi_init_generated_cpp(build_name, platform):
@@ -44,7 +69,11 @@ def generate_vpi_init_generated_cpp(build_name, platform):
 
     for name, idx, siglist in platform.sim_requested:
         for signame, sigbits, topname in siglist:
-            txt += f"ALIGNED(4) static {vpi_uint_ty(sigbits)} sig_{topname}_val;\n"
+            txt += f"static {_uint_ty(sigbits)} sig_{topname}_val;\n"
+    txt += "\n\n"
+
+    txt += _gen_register_cb_func(build_name, platform)
+    txt += "\n\n"
 
     tools.write_to_file("vpi_init_generated.cpp", txt)
 

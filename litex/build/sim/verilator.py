@@ -66,7 +66,7 @@ def _generate_sim_cpp_struct(name, index, siglist):
         content += '    {}{}[{}].signal = &sim->{};\n'.format(name, index, i, sigfname)
 
     idx_int = 0 if not index else int(index)
-    content += '    litex_sim_register_pads({}{}, (char*)"{}", {});\n\n'.format(name, index, name, idx_int)
+    content += '    litex_sim_register_pads({}{}, "{}", {});\n\n'.format(name, index, name, idx_int)
 
     return content
 

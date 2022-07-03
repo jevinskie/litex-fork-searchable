@@ -9,6 +9,7 @@ else
 	CFLAGS += -I/usr/include/iverilog
 endif
 
+CFLAGS += -I$(CORE_DIR)
 CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers

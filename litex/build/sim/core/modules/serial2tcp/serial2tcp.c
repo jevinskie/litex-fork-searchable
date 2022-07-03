@@ -230,11 +230,14 @@ out:
   return ret;
 
 }
+
 static int serial2tcp_tick(void *sess, uint64_t time_ps)
 {
   static clk_edge_state_t edge;
   char c;
   int ret = RC_OK;
+
+  // printf("serial2tcp tick time: %" PRIu64 "\n", time_ps);
 
   struct session_s *s = (struct session_s*)sess;
   if(!clk_pos_edge(&edge, *s->sys_clk)) {

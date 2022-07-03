@@ -15,7 +15,7 @@ extern "C" int litex_sim_main(int argc, const char *argv[]);
 struct Vsim {
     uint8_t foo;
     void eval(){
-        printf(".");
+        // printf(".");
     }
 };
 
@@ -52,6 +52,8 @@ void litex_sim_coverage_dump() {
 }
 #endif
 
+void litex_sim_dump() {}
+
 static int end_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
     finished = true;
@@ -60,9 +62,9 @@ static int end_of_sim_cb(t_cb_data *cbd) {
 
 static int end_of_compile_cb(t_cb_data *cbd) {
     UNUSED(cbd);
-    printf("end of compile\n");
     s_cb_data eos_cbd{.reason = cbEndOfSimulation, .cb_rtn = end_of_sim_cb};
-    assert(vpi_register_cb(&eos_cbd));
+    auto eos_cb = vpi_register_cb(&eos_cbd);
+    assert(eos_cb && vpi_free_object(eos_cb));
     const char *argv[] = {STR(TOPLEVEL), NULL};
     litex_sim_main(1, argv);
     return 0;

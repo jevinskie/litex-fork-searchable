@@ -4,6 +4,11 @@
 extern "C" {
 #endif
 
+#define XSTR(s) #s
+#define STR(s) XSTR(s)
+
+#define UNUSED(x) ((void)(x))
+
 #include <stdint.h>
 
 void litex_sim_init_cmdargs(int argc, const char *argv[]);
@@ -11,6 +16,7 @@ void litex_sim_eval(void *vsim, uint64_t time_ps);
 void litex_sim_init_tracer(void *vsim, long start, long end);
 void litex_sim_tracer_dump(void);
 int litex_sim_got_finish(void);
+void litex_sim_dump(void);
 #if VM_COVERAGE
 void litex_sim_coverage_dump(void);
 #endif

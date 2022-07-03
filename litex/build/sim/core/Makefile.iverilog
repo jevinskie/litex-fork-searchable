@@ -10,7 +10,7 @@ endif
 
 CFLAGS += -DUSE_LITEX_MAIN -Wall -Wextra -fPIC
 # CFLAGS += -O0 -ggdb3
-CXXFLAGS := $(CFLAGS) -std=c++11
+CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
 all: $(TOPLEVEL) modules litex.vpi
 

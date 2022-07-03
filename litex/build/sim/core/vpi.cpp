@@ -37,6 +37,7 @@ void litex_sim_coverage_dump() {}
 static int end_of_sim_cb(t_cb_data *cbd) {
     printf("end of sim\n");
     finished = true;
+    return 0;
 }
 
 static int end_of_compile_cb(t_cb_data *cbd) {

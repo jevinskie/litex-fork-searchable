@@ -16,7 +16,6 @@ extern "C" {
 extern uint64_t sim_time_ps;
 extern struct event_base *base;
 
-
 void litex_sim_init_cmdargs(int argc, const char *argv[]);
 void litex_sim_eval(void *vsim, uint64_t time_ps);
 void litex_sim_init_tracer(void *vsim, long start, long end);

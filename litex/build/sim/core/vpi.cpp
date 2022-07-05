@@ -13,10 +13,10 @@
 
 #ifndef _WIN32
 #define unlikely(expr) __builtin_expect(!!(expr), 0)
-#define likely(expr)   __builtin_expect(!!(expr), 1)
+#define likely(expr) __builtin_expect(!!(expr), 1)
 #else
 #define unlikely(expr) (expr)
-#define likely(expr)   (expr)
+#define likely(expr) (expr)
 #endif
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
@@ -95,7 +95,7 @@ static int start_of_sim_cb(t_cb_data *cbd) {
     s_cb_data eos_cbd{.reason = cbEndOfSimulation, .cb_rtn = end_of_sim_cb};
     auto eos_cb = vpi_register_cb(&eos_cbd);
     assert(eos_cb && vpi_free_object(eos_cb));
-    
+
     const char *argv[] = {STR(TOPLEVEL), nullptr};
     litex_sim_main(1, argv);
 }
@@ -117,7 +117,7 @@ static int end_of_compile_cb(t_cb_data *cbd) {
     s_cb_data eos_cbd{.reason = cbEndOfSimulation, .cb_rtn = end_of_sim_cb};
     auto eos_cb = vpi_register_cb(&eos_cbd);
     assert(eos_cb && vpi_free_object(eos_cb));
-    
+
     const char *argv[] = {STR(TOPLEVEL), nullptr};
     litex_sim_main(1, argv);
 

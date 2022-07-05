@@ -66,7 +66,10 @@ static void register_next_time_cb();
 static int next_time_cb(t_cb_data *cbd) {
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
     printf("time: %" PRIu64 "\n", sim_time_ps);
-    register_next_time_cb();
+    if (unlikely(!sim_time_ps)) {
+        return 0;
+    }
+    assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
     return 0;
 }
 
@@ -80,6 +83,11 @@ static int end_of_compile_cb(t_cb_data *cbd) {
     UNUSED(cbd);
 
     register_next_time_cb();
+
+    // VPI doesn't call NextSimTime for time 0 so do it ourselves
+    s_vpi_time t0{.type = vpiSimTime};
+    s_cb_data t0_cbd{.reason = cbNextSimTime, .time = &t0};
+    next_time_cb(&t0_cbd);
 
     s_cb_data eos_cbd{.reason = cbEndOfSimulation, .cb_rtn = end_of_sim_cb};
     auto eos_cb = vpi_register_cb(&eos_cbd);

@@ -46,8 +46,8 @@ assert({topname}_cb && vpi_free_object({topname}_cb) && vpi_free_object({topname
 def _gen_register_cb_func(build_name, platform):
     txt = """\
 static void register_signal_callbacks() {
-    s_vpi_time time_rec{.type = vpiSimTime};
-    s_vpi_value val_rec{.format = vpiIntVal};
+    static s_vpi_time time_rec{.type = vpiSuppressTime};
+    static s_vpi_value val_rec{.format = vpiIntVal};
 
 """
     for name, idx, siglist in platform.sim_requested:

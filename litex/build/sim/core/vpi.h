@@ -11,12 +11,18 @@ extern "C" {
 
 #include <stdint.h>
 
+#include <event2/event.h>
+
+extern uint64_t sim_time_ps;
+
 void litex_sim_init_cmdargs(int argc, const char *argv[]);
 void litex_sim_eval(void *vsim, uint64_t time_ps);
 void litex_sim_init_tracer(void *vsim, long start, long end);
 void litex_sim_tracer_dump(void);
 int litex_sim_got_finish(void);
 void litex_sim_dump(void);
+void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg);
+
 #if VM_COVERAGE
 void litex_sim_coverage_dump(void);
 #endif

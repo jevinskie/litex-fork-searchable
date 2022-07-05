@@ -169,7 +169,7 @@ int litex_sim_sort_session()
 
 static struct event *ev;
 
-static void cb(evutil_socket_t sock, short which, void *arg)
+void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
 {
   (void)sock, (void)which; // unused
   struct session_list_s *s;
@@ -179,7 +179,13 @@ static void cb(evutil_socket_t sock, short which, void *arg)
   tv.tv_usec = 0;
   int i;
 
-  for(i = 0; i < 1000; i++)
+#ifndef USE_LITEX_MAIN
+  const int num_loops = 1000;
+#else
+  const int num_loops = 1;
+#endif
+
+  for(i = 0; i < num_loops; i++)
   {
     for(s = sesslist; s; s=s->next)
     {
@@ -196,7 +202,9 @@ static void cb(evutil_socket_t sock, short which, void *arg)
         s->module->tick(s->session, sim_time_ps);
     }
 
+#ifndef USE_LITEX_MAIN
     sim_time_ps += timebase_ps;
+#endif
 
     if (litex_sim_got_finish()) {
         event_base_loopbreak(base);
@@ -248,9 +256,11 @@ int litex_sim_main(int argc, const char *argv[])
 
   tv.tv_sec = 0;
   tv.tv_usec = 0;
-  ev = event_new(base, -1, EV_PERSIST, cb, vsim);
+  ev = event_new(base, -1, EV_PERSIST, litex_sim_event_cb, vsim);
   event_add(ev, &tv);
+#ifndef USE_LITEX_MAIN
   event_base_dispatch(base);
+#endif
 #if VM_COVERAGE
   litex_sim_coverage_dump();
 #endif

@@ -1,7 +1,9 @@
 #undef NDEBUG
 #include <cassert>
 #include <cinttypes>
+#include <cstring>
 
+#include "sim_header.h"
 #include "error.h"
 #include "vpi.h"
 #include <vpi_user.h>
@@ -17,17 +19,37 @@
 #define UNUSED(x) ((void)(x))
 
 #ifndef _WIN32
-#define unlikely(expr) __builtin_expect(!!(expr), 0)
-#define likely(expr) __builtin_expect(!!(expr), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x) __builtin_expect(!!(x), 1)
+#define UNUSED_FUNC __attribute__((unused))
 #else
-#define unlikely(expr) (expr)
-#define likely(expr) (expr)
+#define unlikely(x) (x)
+#define likely(x) (x)
+#define UNUSED_FUNC
 #endif
 
-extern "C" void litex_vpi_register_signal_callbacks();
+extern "C" void litex_vpi_signals_register_callbacks();
+extern "C" void litex_vpi_signals_writeback();
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
 static bool finished;
+
+UNUSED_FUNC static int signal_uint8_t_change_cb(struct t_cb_data *cbd) {
+    *(uint8_t *)cbd->user_data = cbd->value->value.integer;
+    return 0;
+}
+
+UNUSED_FUNC static int sigsnal_uint16_t_change_cb(struct t_cb_data *cbd) {
+    *(uint16_t *)cbd->user_data = cbd->value->value.integer;
+    return 0;
+}
+
+UNUSED_FUNC static int signal_uint32_t_change_cb(struct t_cb_data *cbd) {
+    *(uint32_t *)cbd->user_data = cbd->value->value.integer;
+    return 0;
+}
+
+#include "vpi_init_generated.cpp"
 
 static int end_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
@@ -35,14 +57,28 @@ static int end_of_sim_cb(t_cb_data *cbd) {
     return 0;
 }
 
-static void register_next_time_cb();
+static void register_rw_sync_cb();
+
+static int rw_sync_cb(t_cb_data *cbd) {
+    return 0;
+}
+
+static void register_rw_sync_cb() {
+    s_cb_data rws_cbd{.reason = cbReadWriteSynch, .cb_rtn = rw_sync_cb, .time = &nextsimtime};
+    auto rws_cb = vpi_register_cb(&rws_cbd);
+    assert(rws_cb && vpi_free_object(rws_cb));
+}
 
 static void tick() {
     assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
+    litex_vpi_signals_writeback();
 }
+
+static void register_next_time_cb();
 
 static int next_time_cb(t_cb_data *cbd) {
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
+    // printf("t: %" PRIu64 "\n", sim_time_ps);
     tick();
     register_next_time_cb();
     return 0;
@@ -60,9 +96,7 @@ static void dummy_cb(evutil_socket_t sock, short which, void *arg) {
 
 void litex_sim_init(void **out) {
     UNUSED(out);
-    // dummy
-    // eprintf("litex_sim_init\n");
-    litex_vpi_register_signal_callbacks();
+    litex_vpi_signals_register_callbacks();
 }
 
 static int start_of_sim_cb(t_cb_data *cbd) {

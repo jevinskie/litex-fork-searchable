@@ -26,26 +26,35 @@ def _check_signal_bitwidth_compat(platform):
 
 def _register_cb(build_name, name, idx, sigidx, topname, uint_ty, indent=""):
     txt = f"""\
-const auto {topname}_hdl = vpi_handle_by_name("{build_name}.{topname}", nullptr);
-assert({topname}_hdl);
+vpi_handles.{topname} = vpi_handle_by_name("{build_name}.{topname}", nullptr);
+assert(vpi_handles.{topname});
 s_cb_data {topname}_cbd{{
     .reason    = cbValueChange,
     .cb_rtn    = signal_{uint_ty}_change_cb,
-    .obj       = {topname}_hdl,
+    .obj       = vpi_handles.{topname},
     .time      = &time_rec,
     .value     = &val_rec,
     .user_data = (char *)&sig_vals.{topname}
 }};
 const auto {topname}_cb = vpi_register_cb(&{topname}_cbd);
-assert({topname}_cb && vpi_free_object({topname}_cb) && vpi_free_object({topname}_hdl));
+assert({topname}_cb && vpi_free_object({topname}_cb));
 {name}{idx}[{sigidx}].signal = &sig_vals.{topname};
+
+"""
+    return "\n".join([indent + l for l in txt.splitlines()]) + "\n"
+
+def _register_writeback(build_name, name, idx, sigidx, topname, uint_ty, indent=""):
+    txt = f"""\
+if (sig_vals.{topname} != last_sig_vals.{topname}) {{
+
+}}
 
 """
     return "\n".join([indent + l for l in txt.splitlines()]) + "\n"
 
 def _gen_register_cb_func(build_name, platform):
     txt = """\
-extern "C" void litex_vpi_register_signal_callbacks() {
+extern "C" void litex_vpi_signals_register_callbacks() {
     static s_vpi_time time_rec{.type = vpiSuppressTime};
     static s_vpi_value val_rec{.format = vpiIntVal};
 
@@ -59,14 +68,31 @@ extern "C" void litex_vpi_register_signal_callbacks() {
     assert(!litex_sim_register_pads({name}{idx}, "{name}", {idx_int}));
 
 """
-    txt += "}\n"
+    txt += """\
+}
+
+extern "C" void litex_vpi_signals_writeback() {
+    static vpi_values_t last_sig_vals{};
+    if (!memcmp(&sig_vals, &last_sig_vals, sizeof(sig_vals))) {
+        return;
+    }
+
+"""
+    for name, idx, siglist in platform.sim_requested:
+        idx_int = 0 if not idx else int(idx)
+        for sigidx, siginfo in enumerate(siglist):
+            signame, sigbits, topname = siginfo
+            txt += _register_writeback(build_name, name, idx, sigidx, topname, _uint_ty(sigbits), indent=" " * 4)
+    txt += """\
+    memcpy(&last_sig_vals, &sig_vals, sizeof(last_sig_vals));
+}
+"""
     return txt
 
 def generate_vpi_init_generated_cpp(build_name, platform):
     _check_signal_bitwidth_compat(platform)
 
-    txt = "struct vpi_values {\n"
-
+    txt = "struct vpi_values_t {\n"
     num_sigs = 0
     for name, idx, siglist in platform.sim_requested:
         for signame, sigbits, topname in siglist:
@@ -75,10 +101,22 @@ def generate_vpi_init_generated_cpp(build_name, platform):
     txt += f"""\
 }};
 
-static_assert(sizeof(vpi_values) == {num_sigs} * sizeof(int32_t), "Struct padding detected");
-static vpi_values sig_vals;
+static_assert(sizeof(vpi_values_t) == {num_sigs} * sizeof(int32_t), "Struct padding detected");
+static vpi_values_t sig_vals;
 
 """
+
+    txt += "struct vpi_handles_t {\n";
+    for name, idx, siglist in platform.sim_requested:
+        for signame, sigbits, topname in siglist:
+            txt += f"    vpiHandle {topname};\n"
+    txt +="""\
+};
+
+static vpi_handles_t vpi_handles;
+"""
+
+
 
     txt += _gen_register_cb_func(build_name, platform)
     txt += "\n\n"

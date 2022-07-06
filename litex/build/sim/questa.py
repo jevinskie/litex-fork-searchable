@@ -87,7 +87,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += f"./{build_name}\n"
+    run_script_contents += f"vsim -c {build_name} -pli ./litex_vpi.so -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:

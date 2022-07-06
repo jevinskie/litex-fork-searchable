@@ -1,0 +1,34 @@
+CORE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+include $(CORE_DIR)/Makefile.common
+
+OBJS_SIM_PATHS := $(addprefix $(OBJ_DIR)/,$(OBJS_SIM))
+
+ifeq ($(UNAME_S),Darwin)
+	CFLAGS += -I/usr/local/include/iverilog -I/opt/homebrew/include/iverilog
+else
+	CFLAGS += -I/usr/include/iverilog
+endif
+
+CFLAGS += -I$(CORE_DIR)
+CFLAGS += -DUSE_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
+# CFLAGS += -O0 -ggdb3
+CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
+
+all: $(TOPLEVEL) modules litex_vpi.so
+.PHONY: $(TOPLEVEL)
+
+$(TOPLEVEL): $(VERILOG_SRCS)
+	vlog $(QUESTA_FLAGS) $(VERILOG_SRCS)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
+	$(CXX) $(CXXFLAGS) -I. -c -o $@ $^
+
+litex_vpi.so: $(OBJ_DIR)/vpi.o $(OBJS_SIM_PATHS)
+	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
+
+
+clean:
+	rm -rf $(OBJ_DIR) $(TOPLEVEL) litex_vpi.vpi

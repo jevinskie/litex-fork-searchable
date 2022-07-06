@@ -14,10 +14,10 @@ CFLAGS += -DUSE_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
-all: $(TOPLEVEL) modules litex.vpi
+all: $(TOPLEVEL) modules litex_vpi.vpi
 
-$(TOPLEVEL): $(VERILOG_SRCS) litex.vpi
-	iverilog $(IVERILOG_FLAGS) -L . -m litex -o $@ $(VERILOG_SRCS)
+$(TOPLEVEL): $(VERILOG_SRCS) litex_vpi.vpi
+	iverilog $(IVERILOG_FLAGS) -L . -m litex_vpi -o $@ $(VERILOG_SRCS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^
@@ -25,9 +25,9 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
 	$(CXX) $(CXXFLAGS) -I. -c -o $@ $^
 
-litex.vpi: $(OBJ_DIR)/vpi.o $(OBJS_SIM_PATHS)
+litex_vpi.vpi: $(OBJ_DIR)/vpi.o $(OBJS_SIM_PATHS)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
 
 clean:
-	rm -rf $(OBJ_DIR) $(TOPLEVEL) litex.vpi
+	rm -rf $(OBJ_DIR) $(TOPLEVEL) litex_vpi.vpi

@@ -13,11 +13,11 @@ from migen.fhdl.module import Module
 from migen.genlib.record import Record
 
 from litex.build.generic_platform import GenericPlatform, Pins
-from litex.build.sim import common, iverilog, verilator
+from litex.build.sim import common, iverilog, verilator, questa
 from litex.soc.interconnect.csr import AutoCSR, CSR, CSRStorage
 from litex.build.sim.verilator import verilator_build_args, verilator_build_argdict
 from litex.build.sim.iverilog import iverilog_build_args, iverilog_build_argdict
-
+from litex.build.sim.questa import questa_build_args, questa_build_argdict
 
 def sim_build_args(parser):
     tc_arg_name = "--sim-toolchain"
@@ -30,6 +30,7 @@ def sim_build_args(parser):
         {
             "verilator": verilator_build_args,
             "iverilog": iverilog_build_args,
+            "questa": questa_build_args,
         }[stub_args.sim_toolchain](parser)
     except KeyError:
         raise NotImplementedError(f"Simulation toolchain '{stub_args.sim_toolchain}' is not supported.")
@@ -39,7 +40,8 @@ def sim_build_argdict(args):
     try:
         return {
             "verilator": verilator_build_argdict,
-            "iverilog": iverilog_build_argdict, 
+            "iverilog": iverilog_build_argdict,
+            "questa": questa_build_argdict, 
         }[args.sim_toolchain](args)
     except KeyError:
         raise NotImplementedError(f"Simulation toolchain '{args.sim_toolchain}' is not supported.")
@@ -56,7 +58,7 @@ class SimPlatform(GenericPlatform):
         elif toolchain == "iverilog":
             self.toolchain = iverilog.SimIcarusToolchain()
         elif toolchain == "questa":
-            raise NotImplementedError("TODO: questa")
+            self.toolchain = questa.SimQuestaToolchain()
         elif toolchain == "cocotb":
             raise NotImplementedError("TODO: cocotb")
         else:

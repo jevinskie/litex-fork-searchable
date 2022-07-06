@@ -21,7 +21,7 @@ from litex.build.sim.vpi import generate_vpi_init_generated_cpp
 sim_directory = os.path.abspath(os.path.dirname(__file__))
 core_directory = os.path.join(sim_directory, 'core')
 
-_logger = logging.getLogger("Icarus")
+_logger = logging.getLogger("Questa")
 
 
 
@@ -30,7 +30,7 @@ def _generate_sim_config(config):
     tools.write_to_file("sim_config.js", content)
 
 def _generate_sim_variables(build_name, sources, include_paths,
-                            opt_level, extra_mods, extra_mods_path, iverilog_flags=""):
+                            opt_level, extra_mods, extra_mods_path, questa_flags=""):
     tapcfg_dir = get_data_mod("misc", "tapcfg").data_location
     include = ""
     for path in include_paths:
@@ -38,7 +38,7 @@ def _generate_sim_variables(build_name, sources, include_paths,
     content = f"""\
 TOPLEVEL := {build_name}
 OPT_LEVEL ?= {opt_level}
-IVERILOG_FLAGS ?= {iverilog_flags}
+QUESTA_FLAGS ?= {questa_flags}
 VERILOG_SRCS := {" ".join([s[0] for s in sources])}
 SRC_DIR := {core_directory}
 INC_DIR := {include}
@@ -54,7 +54,7 @@ TAPCFG_DIRECTORY := {tapcfg_dir}
     tools.write_to_file("variables.mak", content)
 
 def _build_sim(build_name):
-    makefile = os.path.join(core_directory, 'Makefile.iverilog')
+    makefile = os.path.join(core_directory, 'Makefile.questa')
     build_script_contents = f"""\
 #!/usr/bin/env bash
 set -e -u -x -o pipefail
@@ -103,7 +103,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         termios.tcsetattr(sys.stdin.fileno(), termios.TCSAFLUSH, termios_settings)
 
 
-class SimIcarusToolchain:
+class SimQuestaToolchain:
     def _add_clockers(self, soc, sim_config):
         clks = {}
         for mod in sim_config.modules:
@@ -119,7 +119,7 @@ class SimIcarusToolchain:
 
     def build(self, platform, fragment,
             build_dir        = "build",
-            build_name       = "sim_iverilog",
+            build_name       = "sim_questa",
             serial           = "console",
             build            = True,
             run              = True,
@@ -141,8 +141,8 @@ class SimIcarusToolchain:
         cwd = os.getcwd()
         os.chdir(build_dir)
 
-        if not build_name.endswith("_iverilog"):
-            build_name += "_iverilog"
+        if not build_name.endswith("_questa"):
+            build_name += "_questa"
 
         if build:
             self._add_clockers(fragment, sim_config)
@@ -183,10 +183,10 @@ class SimIcarusToolchain:
         if run:
             if pre_run_callback is not None:
                 pre_run_callback(v_output.ns)
-            if which("iverilog") is None:
-                msg = "Unable to find Icarus Verilog toolchain, please either:\n"
-                msg += "- Install Icarus Verilog.\n"
-                msg += "- Add Icarus Verilog toolchain to your $PATH."
+            if which("vlog") is None:
+                msg = "Unable to find Questa toolchain, please either:\n"
+                msg += "- Install Questa.\n"
+                msg += "- Add Questa toolchain to your $PATH."
                 raise OSError(msg)
             _compile_sim(build_name, verbose)
             run_as_root = False
@@ -201,8 +201,8 @@ class SimIcarusToolchain:
         if build:
             return v_output.ns
 
-def iverilog_build_args(parser):
-    toolchain_group = parser.add_argument_group(title="Icarus Verilog toolchain options")
+def questa_build_args(parser):
+    toolchain_group = parser.add_argument_group(title="Questa toolchain options")
     toolchain_group.add_argument("--trace",        action="store_true", help="Enable Tracing.")
     toolchain_group.add_argument("--trace-fst",    action="store_true", help="Enable FST tracing.")
     toolchain_group.add_argument("--trace-start",  default="0",         help="Time to start tracing (ps).")
@@ -212,7 +212,7 @@ def iverilog_build_args(parser):
         help="Run simulation without user input.")
 
 
-def iverilog_build_argdict(args):
+def questa_build_argdict(args):
     return {
         "trace"       : args.trace,
         "trace_fst"   : args.trace_fst,

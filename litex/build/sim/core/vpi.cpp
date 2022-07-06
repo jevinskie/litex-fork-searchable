@@ -60,25 +60,29 @@ static int end_of_sim_cb(t_cb_data *cbd) {
 static void register_rw_sync_cb();
 
 static int rw_sync_cb(t_cb_data *cbd) {
+    printf("sync\n");
+    litex_vpi_signals_writeback();
     return 0;
 }
 
 static void register_rw_sync_cb() {
+    printf("sync reg\n");
     s_cb_data rws_cbd{.reason = cbReadWriteSynch, .cb_rtn = rw_sync_cb, .time = &nextsimtime};
     auto rws_cb = vpi_register_cb(&rws_cbd);
     assert(rws_cb && vpi_free_object(rws_cb));
+    // assert(rws_cb);
 }
 
 static void tick() {
+    printf("t: %" PRIu64 "\n", sim_time_ps);
     assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
-    litex_vpi_signals_writeback();
+    register_rw_sync_cb();
 }
 
 static void register_next_time_cb();
 
 static int next_time_cb(t_cb_data *cbd) {
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
-    // printf("t: %" PRIu64 "\n", sim_time_ps);
     tick();
     register_next_time_cb();
     return 0;

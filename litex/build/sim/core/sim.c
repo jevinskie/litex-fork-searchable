@@ -36,7 +36,7 @@ uint64_t sim_time_ps = 0;
 struct session_list_s *sesslist=NULL;
 struct event_base *base=NULL;
 
-static int litex_sim_initialize_all(void **sim, void *base)
+int litex_sim_initialize_all(void **sim, void *base)
 {
   struct module_s *ml=NULL;
   struct module_s *mli=NULL;
@@ -167,9 +167,10 @@ int litex_sim_sort_session()
   return RC_OK;
 }
 
+#ifndef USE_VPI
 static struct event *ev;
 
-void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
+static void cb(evutil_socket_t sock, short which, void *arg)
 {
   (void)sock, (void)which; // unused
   struct session_list_s *s;
@@ -179,13 +180,7 @@ void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
   tv.tv_usec = 0;
   int i;
 
-#ifndef USE_LITEX_MAIN
-  const int num_loops = 1000;
-#else
-  const int num_loops = 1;
-#endif
-
-  for(i = 0; i < num_loops; i++)
+  for(i = 0; i < 1000; i++)
   {
     for(s = sesslist; s; s=s->next)
     {
@@ -202,9 +197,7 @@ void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
         s->module->tick(s->session, sim_time_ps);
     }
 
-#ifndef USE_LITEX_MAIN
     sim_time_ps += timebase_ps;
-#endif
 
     if (litex_sim_got_finish()) {
         event_base_loopbreak(base);
@@ -212,19 +205,13 @@ void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
     }
   }
 
-#ifndef USE_LITEX_MAIN
   if (!evtimer_pending(ev, NULL)) {
     event_del(ev);
     evtimer_add(ev, &tv);
   }
-#endif
 }
 
-#ifndef USE_LITEX_MAIN
 int main(int argc, const char *argv[])
-#else
-int litex_sim_main(int argc, const char *argv[])
-#endif
 {
   void *vsim=NULL;
   struct timeval tv;
@@ -258,14 +245,13 @@ int litex_sim_main(int argc, const char *argv[])
 
   tv.tv_sec = 0;
   tv.tv_usec = 0;
-  ev = event_new(base, -1, EV_PERSIST, litex_sim_event_cb, vsim);
-  // event_add(ev, &tv);
-#ifndef USE_LITEX_MAIN
+  ev = event_new(base, -1, EV_PERSIST, cb, vsim);
+  event_add(ev, &tv);
   event_base_dispatch(base);
-#endif
 #if VM_COVERAGE
   litex_sim_coverage_dump();
 #endif
 out:
   return ret;
 }
+#endif // USE_VPI

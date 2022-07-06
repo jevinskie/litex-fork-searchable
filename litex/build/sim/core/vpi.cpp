@@ -20,40 +20,7 @@
 #endif
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
-
-extern "C" int litex_sim_main(int argc, const char *argv[]);
-
 static bool finished;
-
-void litex_sim_eval(void *vsim, uint64_t time_ps) {
-    UNUSED(vsim);
-    UNUSED(time_ps);
-}
-
-void litex_sim_init_cmdargs(int argc, const char *argv[]) {
-    UNUSED(argc);
-    UNUSED(argv);
-}
-
-void litex_sim_init_tracer(void *vsim, long start, long end) {
-    UNUSED(vsim);
-    UNUSED(start);
-    UNUSED(end);
-}
-
-void litex_sim_tracer_dump() {}
-
-int litex_sim_got_finish() {
-    return finished;
-}
-
-#if VM_COVERAGE
-void litex_sim_coverage_dump() {
-    assert(!"VPI coverage is not supported.");
-}
-#endif
-
-void litex_sim_dump() {}
 
 static int end_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
@@ -66,8 +33,8 @@ static void register_next_time_cb();
 static int next_time_cb(t_cb_data *cbd) {
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
     // printf("time: %" PRIu64 "\n", sim_time_ps);
-    assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
-    litex_sim_event_cb(0, 0, nullptr);
+    // assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
+    // litex_sim_event_cb(0, 0, nullptr);
     if (likely(sim_time_ps)) {
         register_next_time_cb();
     }
@@ -82,9 +49,6 @@ static void register_next_time_cb() {
 
 static int end_of_compile_cb(t_cb_data *cbd) {
     UNUSED(cbd);
-
-    const char *argv[] = {STR(TOPLEVEL), nullptr};
-    litex_sim_main(1, argv);
 
     register_next_time_cb();
 

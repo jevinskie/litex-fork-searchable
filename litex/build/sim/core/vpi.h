@@ -16,17 +16,11 @@ extern "C" {
 extern uint64_t sim_time_ps;
 extern struct event_base *base;
 
-void litex_sim_init_cmdargs(int argc, const char *argv[]);
-void litex_sim_eval(void *vsim, uint64_t time_ps);
-void litex_sim_init_tracer(void *vsim, long start, long end);
-void litex_sim_tracer_dump(void);
-int litex_sim_got_finish(void);
-void litex_sim_dump(void);
-void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg);
+int litex_sim_initialize_all(void **sim, void *base);
+void litex_sim_sort_session();
 
-#if VM_COVERAGE
-void litex_sim_coverage_dump(void);
-#endif
+
+int litex_sim_got_finish(void);
 
 #ifdef __cplusplus
 } // extern "C"

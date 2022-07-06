@@ -65,12 +65,12 @@ static void register_next_time_cb();
 
 static int next_time_cb(t_cb_data *cbd) {
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
-    printf("time: %" PRIu64 "\n", sim_time_ps);
-    if (!sim_time_ps) {
-        return 0;
-    }
-    register_next_time_cb();
+    // printf("time: %" PRIu64 "\n", sim_time_ps);
     assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
+    litex_sim_event_cb(0, 0, nullptr);
+    if (likely(sim_time_ps)) {
+        register_next_time_cb();
+    }
     return 0;
 }
 
@@ -80,32 +80,11 @@ static void register_next_time_cb() {
     assert(nt_cb && vpi_free_object(nt_cb));
 }
 
-static int start_of_sim_cb(t_cb_data *cbd) {
-    UNUSED(cbd);
-
-    printf("start of sim\n");
-
-    register_next_time_cb();
-
-    // VPI doesn't call NextSimTime for time 0 so do it ourselves
-    s_vpi_time t0{.type = vpiSimTime};
-    s_cb_data t0_cbd{.reason = cbNextSimTime, .time = &t0};
-    next_time_cb(&t0_cbd);
-
-    s_cb_data eos_cbd{.reason = cbEndOfSimulation, .cb_rtn = end_of_sim_cb};
-    auto eos_cb = vpi_register_cb(&eos_cbd);
-    assert(eos_cb && vpi_free_object(eos_cb));
-
-    const char *argv[] = {STR(TOPLEVEL), nullptr};
-    litex_sim_main(1, argv);
-}
-
 static int end_of_compile_cb(t_cb_data *cbd) {
     UNUSED(cbd);
-    printf("end of compile\n");
-    // s_cb_data sos_cbd{.reason = cbStartOfSimulation, .cb_rtn = start_of_sim_cb};
-    // auto sos_cb = vpi_register_cb(&sos_cbd);
-    // assert(sos_cb && vpi_free_object(sos_cb));
+
+    const char *argv[] = {STR(TOPLEVEL), nullptr};
+    litex_sim_main(1, argv);
 
     register_next_time_cb();
 
@@ -118,8 +97,7 @@ static int end_of_compile_cb(t_cb_data *cbd) {
     auto eos_cb = vpi_register_cb(&eos_cbd);
     assert(eos_cb && vpi_free_object(eos_cb));
 
-    const char *argv[] = {STR(TOPLEVEL), nullptr};
-    litex_sim_main(1, argv);
+
 
     return 0;
 }

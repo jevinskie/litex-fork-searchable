@@ -212,10 +212,12 @@ void litex_sim_event_cb(evutil_socket_t sock, short which, void *arg)
     }
   }
 
+#ifndef USE_LITEX_MAIN
   if (!evtimer_pending(ev, NULL)) {
     event_del(ev);
     evtimer_add(ev, &tv);
   }
+#endif
 }
 
 #ifndef USE_LITEX_MAIN
@@ -257,7 +259,7 @@ int litex_sim_main(int argc, const char *argv[])
   tv.tv_sec = 0;
   tv.tv_usec = 0;
   ev = event_new(base, -1, EV_PERSIST, litex_sim_event_cb, vsim);
-  event_add(ev, &tv);
+  // event_add(ev, &tv);
 #ifndef USE_LITEX_MAIN
   event_base_dispatch(base);
 #endif

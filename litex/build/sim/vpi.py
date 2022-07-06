@@ -34,18 +34,18 @@ s_cb_data {topname}_cbd{{
     .obj       = {topname}_hdl,
     .time      = &time_rec,
     .value     = &val_rec,
-    .user_data = (char *)&sig_{topname}_val
+    .user_data = (char *)&sig_vals.{topname}
 }};
 const auto {topname}_cb = vpi_register_cb(&{topname}_cbd);
 assert({topname}_cb && vpi_free_object({topname}_cb) && vpi_free_object({topname}_hdl));
-{name}{idx}[{sigidx}].signal = &sig_{topname}_val;
+{name}{idx}[{sigidx}].signal = &sig_vals.{topname};
 
 """
     return "\n".join([indent + l for l in txt.splitlines()]) + "\n"
 
 def _gen_register_cb_func(build_name, platform):
     txt = """\
-static void register_signal_callbacks() {
+extern "C" void litex_vpi_register_signal_callbacks() {
     static s_vpi_time time_rec{.type = vpiSuppressTime};
     static s_vpi_value val_rec{.format = vpiIntVal};
 
@@ -65,12 +65,20 @@ static void register_signal_callbacks() {
 def generate_vpi_init_generated_cpp(build_name, platform):
     _check_signal_bitwidth_compat(platform)
 
-    txt = ""
+    txt = "struct vpi_values {\n"
 
+    num_sigs = 0
     for name, idx, siglist in platform.sim_requested:
         for signame, sigbits, topname in siglist:
-            txt += f"static {_uint_ty(sigbits)} sig_{topname}_val;\n"
-    txt += "\n\n"
+            txt += f"    PLI_INT32 {topname};\n"
+            num_sigs += 1
+    txt += f"""\
+}};
+
+static_assert(sizeof(vpi_values) == {num_sigs} * sizeof(int32_t), "Struct padding detected");
+static vpi_values sig_vals;
+
+"""
 
     txt += _gen_register_cb_func(build_name, platform)
     txt += "\n\n"

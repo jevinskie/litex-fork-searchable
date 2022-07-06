@@ -16,9 +16,9 @@ extern "C" {
 extern uint64_t sim_time_ps;
 extern struct event_base *base;
 
+void litex_sim_init(void **out);
 int litex_sim_initialize_all(void **sim, void *base);
-void litex_sim_sort_session();
-
+int litex_sim_sort_session();
 
 int litex_sim_got_finish(void);
 

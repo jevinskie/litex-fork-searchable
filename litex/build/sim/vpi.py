@@ -32,8 +32,8 @@ s_cb_data {topname}_cbd{{
     .reason    = cbValueChange,
     .cb_rtn    = signal_{uint_ty}_change_cb,
     .obj       = vpi_handles.{topname},
-    .time      = &time_rec,
-    .value     = &val_rec,
+    .time      = &t,
+    .value     = &v,
     .user_data = (char *)&sig_vals.{topname}
 }};
 const auto {topname}_cb = vpi_register_cb(&{topname}_cbd);
@@ -46,7 +46,8 @@ assert({topname}_cb && vpi_free_object({topname}_cb));
 def _register_writeback(build_name, name, idx, sigidx, topname, uint_ty, indent=""):
     txt = f"""\
 if (sig_vals.{topname} != last_sig_vals.{topname}) {{
-
+    v.value.integer = sig_vals.{topname};
+    assert(!vpi_put_value(vpi_handles.{topname}, &v, nullptr, vpiNoDelay));
 }}
 
 """
@@ -55,8 +56,8 @@ if (sig_vals.{topname} != last_sig_vals.{topname}) {{
 def _gen_register_cb_func(build_name, platform):
     txt = """\
 extern "C" void litex_vpi_signals_register_callbacks() {
-    static s_vpi_time time_rec{.type = vpiSuppressTime};
-    static s_vpi_value val_rec{.format = vpiIntVal};
+    static s_vpi_time t{.type = vpiSuppressTime};
+    static s_vpi_value v{.format = vpiIntVal};
 
 """
     for name, idx, siglist in platform.sim_requested:
@@ -76,6 +77,8 @@ extern "C" void litex_vpi_signals_writeback() {
     if (!memcmp(&sig_vals, &last_sig_vals, sizeof(sig_vals))) {
         return;
     }
+
+    s_vpi_value v{.format = vpiIntVal};
 
 """
     for name, idx, siglist in platform.sim_requested:

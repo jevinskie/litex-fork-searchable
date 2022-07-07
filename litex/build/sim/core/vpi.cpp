@@ -67,7 +67,8 @@ static int rw_sync_cb(t_cb_data *cbd) {
 
 static void register_rw_sync_cb() {
     printf("sync reg\n");
-    s_cb_data rws_cbd{.reason = cbReadWriteSynch, .cb_rtn = rw_sync_cb, .time = &nextsimtime};
+    s_vpi_time rwst{.type = vpiSuppressTime};
+    s_cb_data rws_cbd{.reason = cbReadWriteSynch, .cb_rtn = rw_sync_cb, .time = &rwst};
     auto rws_cb = vpi_register_cb(&rws_cbd);
     assert(rws_cb && vpi_free_object(rws_cb));
     // assert(rws_cb);

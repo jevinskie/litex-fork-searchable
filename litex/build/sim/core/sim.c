@@ -65,7 +65,11 @@ int litex_sim_initialize_all(void **sim, void *base)
   }
 
   /* Load configuration */
-  ret = litex_sim_file_parse("sim_config.js", &ml, &timebase_ps);
+  uint64_t *tbp = &timebase_ps;
+#ifdef LITEX_VPI
+  tbp = NULL;
+#endif
+  ret = litex_sim_file_parse("sim_config.js", &ml, tbp);
   if(RC_OK != ret)
   {
     goto out;
@@ -167,7 +171,7 @@ int litex_sim_sort_session()
   return RC_OK;
 }
 
-#ifndef USE_VPI
+#ifndef LITEX_VPI
 static struct event *ev;
 
 static void cb(evutil_socket_t sock, short which, void *arg)
@@ -254,4 +258,4 @@ int main(int argc, const char *argv[])
 out:
   return ret;
 }
-#endif // USE_VPI
+#endif // LITEX_VPI

@@ -54,10 +54,12 @@ class SimConfig():
                 return True
         return False
 
-    def get_json(self):
-        assert "clocker" in (m["module"] for m in self.modules), \
-            "No simulation clocker found! Use sim_config.add_clocker() to define one or more clockers."
-        config = self.modules + [self._format_timebase()]
+    def get_json(self, require_clockers=True):
+        config = self.modules
+        if require_clockers:
+            assert "clocker" in (m["module"] for m in self.modules), \
+                "No simulation clocker found! Use sim_config.add_clocker() to define one or more clockers."
+            config += [self._format_timebase()]
         return json.dumps(config, indent=4)
 
 def _calculate_timebase_ps(clockers):

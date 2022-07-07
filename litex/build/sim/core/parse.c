@@ -387,10 +387,12 @@ int litex_sim_file_parse(char *filename, struct module_s **mod, uint64_t *timeba
     goto out;
   }
 
-  ret = json_get_timebase(obj, timebase);
-  if(RC_OK != ret)
-  {
-    goto out;
+  if(timebase) {
+    ret = json_get_timebase(obj, timebase);
+    if(RC_OK != ret)
+    {
+      goto out;
+    }
   }
 
   ret = json_to_module_list(obj, &m);

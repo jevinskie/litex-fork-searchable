@@ -26,7 +26,7 @@ _logger = logging.getLogger("Icarus")
 
 
 def _generate_sim_config(config):
-    content = config.get_json()
+    content = config.get_json(require_clockers=False)
     tools.write_to_file("sim_config.js", content)
 
 def _generate_sim_variables(build_name, sources, include_paths,
@@ -110,6 +110,7 @@ class SimIcarusToolchain:
             if mod["module"] != "clocker":
                 continue
             clks[mod["interface"][0].removesuffix("_clk")] = mod["args"]
+            sim_config.modules.remove(mod)
 
         for cd, params in clks.items():
             soc.submodules += SimClocker(soc.platform, cd, soc.platform.lookup_request(f"{cd}_clk"), params["freq_hz"], params["phase_deg"])

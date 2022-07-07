@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-#ifdef USE_VPI
+#ifdef LITEX_VPI
 #include <vpi_user.h>
 #endif
 
@@ -15,7 +15,7 @@
 #define RC_JSERROR -4
 #define RC_JSMISSINGKEY -5
 
-#ifndef USE_VPI
+#ifndef LITEX_VPI
 #define eprintf(format, ...) fprintf (stderr, "%s:%d "format, __FILE__, __LINE__,  ##__VA_ARGS__)
 #else
 #define eprintf(fmt, ...)                                                                          \

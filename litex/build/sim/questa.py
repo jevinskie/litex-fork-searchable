@@ -110,7 +110,7 @@ class SimQuestaToolchain:
             if mod["module"] != "clocker":
                 continue
             clks[mod["interface"][0].removesuffix("_clk")] = mod["args"]
-            sim_config.modules.remove(mod)
+            # sim_config.modules.remove(mod)
 
         for cd, params in clks.items():
             soc.submodules += SimClocker(soc.platform, cd, soc.platform.lookup_request(f"{cd}_clk"), params["freq_hz"], params["phase_deg"])

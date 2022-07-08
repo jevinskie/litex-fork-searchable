@@ -87,7 +87,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += f"vsim -c {build_name} -pli ./litex_vpi.so -undefsyms=off -do \"run -a\"\n"
+    run_script_contents += f"vsim -c {build_name} -pli ./litex_vpi.so -no_autoacc -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
@@ -110,7 +110,7 @@ class SimQuestaToolchain:
             if mod["module"] != "clocker":
                 continue
             clks[mod["interface"][0].removesuffix("_clk")] = mod["args"]
-            # sim_config.modules.remove(mod)
+            sim_config.modules.remove(mod)
 
         for cd, params in clks.items():
             soc.submodules += SimClocker(soc.platform, cd, soc.platform.lookup_request(f"{cd}_clk"), params["freq_hz"], params["phase_deg"])

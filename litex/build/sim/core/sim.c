@@ -15,6 +15,7 @@
 #include "error.h"
 #include "modules.h"
 #include "pads.h"
+#include "sim.h"
 #include "veril.h"
 
 #include <event2/listener.h>
@@ -23,13 +24,6 @@
 
 void litex_sim_init(void **out);
 void litex_sim_dump();
-
-struct session_list_s {
-  void *session;
-  char tickfirst;
-  struct ext_module_s *module;
-  struct session_list_s *next;
-};
 
 uint64_t timebase_ps = 1;
 uint64_t sim_time_ps = 0;

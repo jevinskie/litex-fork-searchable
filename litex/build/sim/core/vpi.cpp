@@ -3,10 +3,15 @@
 #include <cinttypes>
 #include <cstring>
 
-#include "sim_header.h"
 #include "error.h"
+#include "modules.h"
+#include "sim.h"
+#include "sim_header.h"
 #include "vpi.h"
+
+#include <event2/event.h>
 #include <vpi_user.h>
+
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -28,11 +33,13 @@
 #define UNUSED_FUNC
 #endif
 
+extern "C" session_list_s *sesslist;
 extern "C" void litex_vpi_signals_register_callbacks();
 extern "C" void litex_vpi_signals_writeback();
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
 static bool finished;
+static struct event *ev;
 
 UNUSED_FUNC static int signal_uint8_t_change_cb(struct t_cb_data *cbd) {
     *(uint8_t *)cbd->user_data = cbd->value->value.integer;
@@ -51,15 +58,10 @@ UNUSED_FUNC static int signal_uint32_t_change_cb(struct t_cb_data *cbd) {
 
 #include "vpi_init_generated.cpp"
 
-static int end_of_sim_cb(t_cb_data *cbd) {
-    UNUSED(cbd);
-    finished = true;
-    return 0;
-}
-
 static void register_rw_sync_cb();
 
 static int rw_sync_cb(t_cb_data *cbd) {
+    UNUSED(cbd);
     litex_vpi_signals_writeback();
     return 0;
 }
@@ -74,6 +76,31 @@ static void register_rw_sync_cb() {
 static void tick() {
     // printf("t: %" PRIu64 "\n", sim_time_ps);
     assert(event_base_loop(base, EVLOOP_NONBLOCK) >= 0);
+
+    session_list_s *s{};
+
+    for (s = sesslist; s; s = s->next) {
+        if (s->tickfirst)
+            s->module->tick(s->session, sim_time_ps);
+    }
+
+    for (s = sesslist; s; s = s->next) {
+        if (!s->tickfirst)
+            s->module->tick(s->session, sim_time_ps);
+    }
+
+    if (finished) {
+        event_base_loopbreak(base);
+        return;
+    }
+
+    if (!evtimer_pending(ev, NULL)) {
+        // printf("timer reprime\n");
+        event_del(ev);
+        timeval tv{};
+        evtimer_add(ev, &tv);
+    }
+
     register_rw_sync_cb();
 }
 
@@ -93,7 +120,8 @@ static void register_next_time_cb() {
 }
 
 static void dummy_cb(evutil_socket_t sock, short which, void *arg) {
-    // eprintf("dummy_cb\n");
+    UNUSED(sock); UNUSED(which); UNUSED(arg);
+    printf("dummy_cb\n");
 }
 
 void litex_sim_init(void **out) {
@@ -101,10 +129,15 @@ void litex_sim_init(void **out) {
     litex_vpi_signals_register_callbacks();
 }
 
+static int end_of_sim_cb(t_cb_data *cbd) {
+    UNUSED(cbd);
+    finished = true;
+    return 0;
+}
+
 static int start_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
     int ret = RC_ERROR;
-    static struct event *ev;
 
     printf("hello world\n");
 #ifdef _WIN32

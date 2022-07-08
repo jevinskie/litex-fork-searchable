@@ -122,6 +122,7 @@ static void read_handler(int fd, short event, void *arg)
     event_free(s->ev);
     s->ev = NULL;
   }
+  fprintf(stderr, "got data\n");
   for(i = 0; i < read_len; i++)
   {
     s->databuf[(s->data_start +  s->datalen ) % 2048] = buffer[i];
@@ -237,7 +238,7 @@ static int serial2tcp_tick(void *sess, uint64_t time_ps)
   char c;
   int ret = RC_OK;
 
-  printf("serial2tcp tick time: %" PRIu64 "\n", time_ps);
+  // fprintf(stderr, "serial2tcp tick time: %" PRIu64 "\n", time_ps);
 
   struct session_s *s = (struct session_s*)sess;
   if(!clk_pos_edge(&edge, *s->sys_clk)) {
@@ -256,6 +257,7 @@ static int serial2tcp_tick(void *sess, uint64_t time_ps)
 
   *s->rx_valid=0;
   if(s->datalen) {
+    fprintf(stderr, "write char\n");
     c = s->databuf[s->data_start];
     *s->rx = c;
     *s->rx_valid=1;

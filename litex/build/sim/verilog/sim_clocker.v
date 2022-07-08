@@ -14,7 +14,7 @@ initial begin
     clk <= 0;
     #(clk_per / 2.0 + phase_delay);
     forever begin
-        $display("pre clk dly t: %0d", $time);
+        // $display("pre clk dly t: %0d", $time);
         #(clk_per / 2.0);
         clk <= ~clk;
     end

@@ -94,13 +94,6 @@ static void tick() {
         return;
     }
 
-    if (!evtimer_pending(ev, NULL)) {
-        // printf("timer reprime\n");
-        event_del(ev);
-        timeval tv{};
-        evtimer_add(ev, &tv);
-    }
-
     register_rw_sync_cb();
 }
 
@@ -119,11 +112,6 @@ static void register_next_time_cb() {
     assert(nt_cb && vpi_free_object(nt_cb));
 }
 
-static void dummy_cb(evutil_socket_t sock, short which, void *arg) {
-    UNUSED(sock); UNUSED(which); UNUSED(arg);
-    printf("dummy_cb\n");
-}
-
 void litex_sim_init(void **out) {
     UNUSED(out);
     litex_vpi_signals_register_callbacks();
@@ -139,7 +127,6 @@ static int start_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
     int ret = RC_ERROR;
 
-    printf("hello world\n");
 #ifdef _WIN32
     WSADATA wsa_data;
     WSAStartup(0x0201, &wsa_data);
@@ -158,14 +145,6 @@ static int start_of_sim_cb(t_cb_data *cbd) {
     if (RC_OK != (ret = litex_sim_sort_session())) {
         eprintf("Can't sort session lists\n");
     }
-
-    struct timeval tv {
-        .tv_sec = 0, .tv_usec = 0
-    };
-    ev = event_new(base, -1, EV_PERSIST, dummy_cb, nullptr);
-    event_add(ev, &tv);
-
-    // eprintf("reg_cb\n");
 
     // tick for time 0
     tick();

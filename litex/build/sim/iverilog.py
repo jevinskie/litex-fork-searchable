@@ -142,9 +142,6 @@ class SimIcarusToolchain:
         cwd = os.getcwd()
         os.chdir(build_dir)
 
-        if not build_name.endswith("_iverilog"):
-            build_name += "_iverilog"
-
         if build:
             self._add_clockers(fragment, sim_config)
             # Finalize design

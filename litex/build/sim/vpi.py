@@ -46,12 +46,6 @@ assert({topname}_cb && vpi_free_object({topname}_cb));
 def _register_writeback(build_name, name, idx, sigidx, topname, uint_ty, indent=""):
     txt = f"""\
 if (sig_vals.{topname} != last_sig_vals.{topname}) {{
-"""
-    if topname != "sys_clk":
-        txt += f"""\
-    fprintf(stderr, \"{topname} old: 0x%08x new: 0x%08x\\n\", last_sig_vals.{topname}, sig_vals.{topname});
-"""
-    txt += f"""\
     v.value.integer = sig_vals.{topname};
     assert(!vpi_put_value(vpi_handles.{topname}, &v, nullptr, vpiNoDelay));
 }}

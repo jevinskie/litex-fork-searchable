@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <libgen.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -118,9 +119,9 @@ int main(int argc,  char * const *argv) {
 #endif
 
 #ifdef __linux__
-    res = execv(argv[1], &argv[1]);
+    res = execvp(argv[1], &argv[1]);
 #else
-    res = execv("/usr/bin/sudo", &argv[1]);
+    res = execvp("sudo", &argv[1]);
 #endif
 
     if (res) {

@@ -35,4 +35,4 @@ sim: $(OBJS_SIM) | mkdir
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -rf modules $(OBJ_DIR)

@@ -1,6 +1,5 @@
 CC ?= gcc
 OPT_LEVEL ?= O3
-USE_VPI ?= 0
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
@@ -11,10 +10,6 @@ else
     CFLAGS += -Wall -$(OPT_LEVEL) -ggdb -fPIC -Werror
 endif
 LDFLAGS += -ljson-c -levent -shared -fPIC
-
-ifeq ($(USE_VPI),1)
-	CFLAGS += -DLITEX_VPI
-endif
 
 MOD_SRC_DIR=$(SRC_DIR)/modules/$(MOD)
 EXTRA_MOD_SRC_DIR=$(EXTRA_MOD_BASE_DIR)/$(MOD)

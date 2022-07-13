@@ -9,7 +9,6 @@
 #include <json-c/json.h>
 #include "tapcfg.h"
 #include "modules.h"
-// #include "print.h"
 
 struct eth_packet_s {
   char data[2000];
@@ -102,8 +101,6 @@ static int ethernet_start(void *b)
 {
   base = (struct event_base *) b;
   printf("[ethernet] loaded (%p)\n", base);
-  fprintf(stderr, "[ethernet] loaded (%p) stderr\n", base);
-  fflush(stdout);
   return RC_OK;
 }
 

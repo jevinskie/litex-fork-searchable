@@ -12,16 +12,17 @@ endif
 CFLAGS += -I$(CORE_DIR)
 CFLAGS += -DLITEX_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
+CFLAGS += -$(OPT_LEVEL)
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
-all: $(TOPLEVEL)_opt modules litex_vpi.so
+all: $(TOPLEVEL) modules litex_vpi.so
 .PHONY: $(TOPLEVEL) $(TOPLEVEL)_opt
 
 $(TOPLEVEL): $(VERILOG_SRCS)
 	vlog $(QUESTA_FLAGS) $(VERILOG_SRCS)
 
 $(TOPLEVEL)_opt: $(TOPLEVEL)
-	vopt +noacc $(TOPLEVEL) -o $(TOPLEVEL)_opt
+	vopt -noincr +noacc $(TOPLEVEL) -o $(TOPLEVEL)_opt
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^

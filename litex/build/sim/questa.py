@@ -87,7 +87,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += f"vsim -c {build_name}_opt -pli ./litex_vpi.so -no_autoacc -undefsyms=off -do \"run -a\"\n"
+    run_script_contents += f"vsim -c {build_name} -pli ./litex_vpi.so -no_autoacc -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
@@ -163,12 +163,19 @@ class SimQuestaToolchain:
             _generate_sim_h(platform)
             generate_vpi_init_generated_cpp(build_name, platform)
 
+            defs_args = [f"+define+{d}{f'={v}' if v is not None else ''}" \
+                            for d, v in platform.compiler_definitions.items()]
+            inc_args = [f"+incdir+{d}" for d in platform.verilog_include_paths]
+            vlog_args = ["-sv", *defs_args, *inc_args]
+            questa_flags = " ".join(vlog_args)
+
             _generate_sim_variables(build_name,
                                     platform.sources,
                                     platform.verilog_include_paths,
                                     opt_level,
                                     extra_mods,
-                                    extra_mods_path)
+                                    extra_mods_path,
+                                    questa_flags=questa_flags)
 
             # Generate sim config
             if sim_config:

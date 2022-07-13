@@ -379,6 +379,7 @@ class GenericPlatform:
         self.name                  = name
         self.sources               = []
         self.verilog_include_paths = []
+        self.compiler_definitions  = {}
         self.output_dir            = None
         self.finalized             = False
         self.use_default_clk       = False
@@ -475,6 +476,9 @@ class GenericPlatform:
 
     def add_verilog_include_path(self, path):
         self.verilog_include_paths.append(os.path.abspath(path))
+
+    def add_compiler_definition(self, definition, value=None):
+        self.compiler_definitions[definition] = value
 
     def resolve_signals(self, vns):
         # Resolve signal names in constraints.

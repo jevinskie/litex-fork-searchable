@@ -35,11 +35,17 @@ def _generate_sim_variables(build_name, sources, include_paths,
     include = ""
     for path in include_paths:
         include += "-I"+path+" "
+    verilog_srcs = [s[0] for s in sources if s[1] == "verilog"]
+    systemverilog_srcs = [s[0] for s in sources if s[1] == "systemverilog"]
+    vhdl_srcs = [s[0] for s in sources if s[1] == "vhdl"]
+    if len(vhdl_srcs):
+        raise NotImplementedError("VHDL compilation is not yet implemented.")
     content = f"""\
 TOPLEVEL := {build_name}
 OPT_LEVEL ?= {opt_level}
 QUESTA_FLAGS ?= {questa_flags}
-VERILOG_SRCS := {" ".join([s[0] for s in sources])}
+VERILOG_SRCS := {" ".join(verilog_srcs)}
+SYSTEMVERILOG_SRCS := {" ".join(systemverilog_srcs)}
 SRC_DIR := {core_directory}
 INC_DIR := {include}
 TAPCFG_DIRECTORY := {tapcfg_dir}
@@ -87,7 +93,7 @@ def _run_sim(build_name, as_root=False, interactive=True):
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += f"vsim -c {build_name} -pli ./litex_vpi.so -keepstdout -no_autoacc -undefsyms=off -do \"run -a\"\n"
+    run_script_contents += f"vsim -c {build_name}_opt -pli ./litex_vpi.so -keepstdout -no_autoacc -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
     if sys.platform != "win32" and interactive:
@@ -166,7 +172,7 @@ class SimQuestaToolchain:
             defs_args = [f"+define+{d}{f'={v}' if v is not None else ''}" \
                             for d, v in platform.compiler_definitions.items()]
             inc_args = [f"+incdir+{d}" for d in platform.verilog_include_paths]
-            vlog_args = ["-sv", *defs_args, *inc_args]
+            vlog_args = [*defs_args, *inc_args]
             questa_flags = " ".join(vlog_args)
 
             _generate_sim_variables(build_name,

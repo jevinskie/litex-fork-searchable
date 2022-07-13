@@ -14,10 +14,20 @@ CFLAGS += -DLITEX_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
-all: work/$(TOPLEVEL)_opt/_lib.qdb modules litex_vpi.so
+all: $(TOPLEVEL)_opt modules litex_vpi.so
 
-work/_lib.qdb: $(VERILOG_SRCS)
+.PHONY: $(TOPLEVEL) $(TOPLEVEL)_opt
+
+$(TOPLEVEL): work/_lib.qdb
+$(TOPLEVEL)_opt: work/$(TOPLEVEL)_opt/_lib.qdb
+
+work/_lib.qdb: $(VERILOG_SRCS) $(SYSTEMVERILOG_SRCS)
+ifneq ($(VERILOG_SRCS),)
 	vlog $(QUESTA_FLAGS) $(VERILOG_SRCS)
+endif
+ifneq ($(SYSTEMVERILOG_SRCS),)
+	vlog $(QUESTA_FLAGS) -sv $(SYSTEMVERILOG_SRCS)
+endif
 
 work/$(TOPLEVEL)_opt/_lib.qdb: work/_lib.qdb
 	vopt -noincr +noacc $(TOPLEVEL) -o $(TOPLEVEL)_opt

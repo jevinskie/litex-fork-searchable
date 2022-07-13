@@ -4,6 +4,7 @@
 #include <json-c/json.h>
 #include "error.h"
 #include "modules.h"
+#include "print.h"
 
 struct session_s {
   char *clk;

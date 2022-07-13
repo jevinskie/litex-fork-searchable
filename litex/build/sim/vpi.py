@@ -51,6 +51,14 @@ if (sig_vals.{topname} != last_sig_vals.{topname}) {{
 }}
 
 """
+
+#     if topname != "sys_clk":
+#         txt += f"""\
+# if (sig_vals.{topname} != last_sig_vals.{topname}) {{
+#     fprintf(stderr, \"{topname} old: 0x%08x new: 0x%08x\\n\", last_sig_vals.{topname}, sig_vals.{topname});
+# }}
+# """
+
     return "\n".join([indent + l for l in txt.splitlines()]) + "\n"
 
 def _gen_register_cb_func(build_name, platform):

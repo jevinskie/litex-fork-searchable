@@ -1,14 +1,20 @@
 CC ?= gcc
+OPT_LEVEL ?= O3
+USE_VPI ?= 0
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
     CFLAGS += -I/usr/local/include/
     LDFLAGS += -L/usr/local/lib -ljson-c
-    CFLAGS += -Wall -O0 -ggdb -fPIC
+    CFLAGS += -Wall -$(OPT_LEVEL) -ggdb -fPIC
 else
-    CFLAGS += -Wall -O0 -ggdb -fPIC -Werror
+    CFLAGS += -Wall -$(OPT_LEVEL) -ggdb -fPIC -Werror
 endif
 LDFLAGS += -ljson-c -levent -shared -fPIC
+
+ifeq ($(USE_VPI),1)
+	CFLAGS += -DLITEX_VPI
+endif
 
 MOD_SRC_DIR=$(SRC_DIR)/modules/$(MOD)
 EXTRA_MOD_SRC_DIR=$(EXTRA_MOD_BASE_DIR)/$(MOD)

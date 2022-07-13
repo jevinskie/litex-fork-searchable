@@ -12,17 +12,20 @@ endif
 CFLAGS += -I$(CORE_DIR)
 CFLAGS += -DLITEX_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
-CFLAGS += -$(OPT_LEVEL)
+# CFLAGS += -$(OPT_LEVEL)
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
 all: $(TOPLEVEL) modules litex_vpi.so
-.PHONY: $(TOPLEVEL) $(TOPLEVEL)_opt
+.PHONY: $(TOPLEVEL)
+
+# all: $(TOPLEVEL)_opt
+# .PHONY: $(TOPLEVEL)_opt
 
 $(TOPLEVEL): $(VERILOG_SRCS)
 	vlog $(QUESTA_FLAGS) $(VERILOG_SRCS)
 
-$(TOPLEVEL)_opt: $(TOPLEVEL)
-	vopt -noincr +noacc $(TOPLEVEL) -o $(TOPLEVEL)_opt
+# $(TOPLEVEL)_opt: $(TOPLEVEL)
+#	vopt -noincr +noacc $(TOPLEVEL) -o $(TOPLEVEL)_opt
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^
@@ -33,6 +36,10 @@ $(OBJ_DIR)/vpi.o: $(CORE_DIR)/vpi.cpp | mkdir
 litex_vpi.so: $(OBJ_DIR)/vpi.o $(OBJS_SIM_PATHS)
 	$(CXX) $(CXXFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
-
 clean:
 	rm -rf $(OBJ_DIR) $(TOPLEVEL) litex_vpi.vpi
+
+.PHONY: modules
+modules:
+	mkdir -p modules
+	$(MAKE) -C modules -f $(MOD_DIR)/Makefile OPT_LEVEL=$(OPT_LEVEL) USE_VPI=1

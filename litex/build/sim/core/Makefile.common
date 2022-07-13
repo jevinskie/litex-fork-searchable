@@ -33,4 +33,4 @@ mkdir:
 .PHONY: modules
 modules:
 	mkdir -p modules
-	$(MAKE) -C modules -f $(MOD_DIR)/Makefile
+	$(MAKE) -C modules -f $(MOD_DIR)/Makefile OPT_LEVEL=$(OPT_LEVEL)

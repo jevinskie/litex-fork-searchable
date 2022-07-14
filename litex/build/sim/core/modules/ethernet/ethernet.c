@@ -217,6 +217,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     s->databuf[s->datalen++]=c;
   } else {
     if(s->datalen) {
+      // printf("writing packet len %d\n", s->datalen);
       tapcfg_write(s->tapcfg, s->databuf, s->datalen);
       s->datalen=0;
     }
@@ -232,6 +233,7 @@ static int ethernet_tick(void *sess, uint64_t time_ps)
     }
   } else {
     if(s->ethpack) {
+      // printf("reading packet len %ld\n", s->ethpack->len);
       memcpy(s->inbuf, s->ethpack->data, s->ethpack->len);
       s->inlen = s->ethpack->len;
       pep=s->ethpack->next;

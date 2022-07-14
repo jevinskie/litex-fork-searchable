@@ -186,6 +186,11 @@ def main():
     parser.add_argument("--udp-port",        default=1234,           help="Set UDP remote port.")
     parser.add_argument("--udp-scan",        action="store_true",    help="Scan network for available UDP devices.")
 
+    # Sim TCP (serial2tcp) arguments
+    parser.add_argument("--sim-tcp",         action="store_true",    help="Select simulator TCP interface.")
+    parser.add_argument("--sim-tcp-host",    default="localhost",    help="Set simulator TCP hostname.")
+    parser.add_argument("--sim-tcp-port",    default=2430,           help="Set simulator TCP port.")
+
     # PCIe arguments
     parser.add_argument("--pcie",            action="store_true",    help="Select PCIe interface.")
     parser.add_argument("--pcie-bar",        default=None,           help="Set PCIe BAR.")
@@ -236,6 +241,13 @@ def main():
         else:
             print("[CommUDP] ip: {} / port: {} / ".format(udp_ip, udp_port), end="")
             comm = CommUDP(udp_ip, udp_port, debug=args.debug)
+
+    # TCP mode
+    if args.sim_tcp:
+        from litex.tools.remote.comm_uart import CommUARTTCP
+        print(f"[CommUARTTCP] hostname: {args.sim_tcp_host} / port: {args.sim_tcp_port} / ", end="")
+        comm = CommUARTTCP(args.sim_tcp_host, args.sim_tcp_port, debug=args.debug)
+
 
     # PCIe mode
     elif args.pcie:

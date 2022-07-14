@@ -2,10 +2,12 @@
 # This file is part of LiteX.
 #
 # Copyright (c) 2015-2020 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2022      Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import socket
+
 import serial
-import struct
 
 from litex.tools.remote.csr_builder import CSRBuilder
 
@@ -92,3 +94,43 @@ class CommUART(CSRBuilder):
                     print("write 0x{:08x} @ 0x{:08x}".format(value, addr + offset, 4*i))
             offset += size
             length -= size
+
+
+# CommUARTTCP --------------------------------------------------------------------------------------
+
+class CommUARTTCP(CommUART):
+    def __init__(self, hostname, port, csr_csv=None, debug=False):
+        CSRBuilder.__init__(self, comm=self, csr_csv=csr_csv)
+        self.hostname = hostname
+        self.port     = port
+        self.debug    = debug
+        self.opened   = False
+
+    def open(self):
+        if hasattr(self, "socket"):
+            return
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((self.hostname, self.port))
+
+    def close(self):
+        if not hasattr(self, "socket"):
+            return
+        self.socket.close()
+        del self.socket
+
+    def _read(self, length):
+        r = bytes()
+        while len(r) < length:
+            r += self.socket.recv(length - len(r))
+        return r
+
+    def _write(self, data):
+        remaining = len(data)
+        pos = 0
+        while remaining:
+            written = self.socket.send(bytes(data[pos:]))
+            remaining -= written
+            pos += written
+
+    def _flush(self):
+        return

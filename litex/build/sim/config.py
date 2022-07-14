@@ -50,7 +50,7 @@ class SimConfig():
 
     def has_module(self, name):
         for module in self.modules:
-            if module["module"] == name:
+            if "module" in module and module["module"] == name:
                 return True
         return False
 

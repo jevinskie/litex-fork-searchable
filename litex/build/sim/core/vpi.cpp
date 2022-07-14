@@ -90,6 +90,7 @@ static void tick() {
     }
 
     if (finished) {
+        printf("finished, calling event_base_loopbreak\n");
         event_base_loopbreak(base);
         return;
     }
@@ -119,6 +120,7 @@ void litex_sim_init(void **out) {
 
 static int end_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
+    printf("end_of_sim_cb\n");
     finished = true;
     return 0;
 }

@@ -104,31 +104,56 @@ class CommUARTTCP(CommUART):
         self.hostname = hostname
         self.port     = port
         self.debug    = debug
-        self.opened   = False
 
     def open(self):
+        if self.debug:
+            print(f"open {self.hostname}:{self.port}")
         if hasattr(self, "socket"):
             return
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.hostname, self.port))
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
+        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 1)
+
 
     def close(self):
+        if self.debug:
+            print(f"close")
         if not hasattr(self, "socket"):
             return
         self.socket.close()
         del self.socket
 
     def _read(self, length):
+        if self.debug:
+            print(f"_read {length}")
         r = bytes()
         while len(r) < length:
-            r += self.socket.recv(length - len(r))
+            rbuf = self.socket.recv(length - len(r))
+            if self.debug:
+                print(f"_read recv {len(rbuf)}")
+            if not rbuf:
+                self.close()
+                self.open()
+            r += rbuf
         return r
 
     def _write(self, data):
+        if self.debug:
+            print(f"_write {len(data)}")
         remaining = len(data)
         pos = 0
         while remaining:
-            written = self.socket.send(bytes(data[pos:]))
+            written = 0
+            try:
+                written = self.socket.send(bytes(data[pos:]))
+                if self.debug:
+                    print(f"_write send {written}")
+            except BrokenPipeError:
+                self.close()
+                self.open()
             remaining -= written
             pos += written
 

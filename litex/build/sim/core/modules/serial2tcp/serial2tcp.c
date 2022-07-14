@@ -194,7 +194,7 @@ static int serial2tcp_new(void **sess, char *args)
   listener = evconnlistener_new_bind(base, accept_conn_cb, s,  LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1, (struct sockaddr*)&sin, sizeof(sin));
   if (!listener) {
     ret=RC_ERROR;
-    eprintf("Can't bind port %d\n!\n", port);
+    eprintf("Can't bind port %d!\n", port);
     goto out;
   }
   evconnlistener_set_error_cb(listener, accept_error_cb);

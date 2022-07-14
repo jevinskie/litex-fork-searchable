@@ -251,6 +251,7 @@ class DownConverter(Module):
 
     """
     def __init__(self, master, slave):
+        print("DOWNCONVERTER")
         dw_from = len(master.dat_w)
         dw_to   = len(slave.dat_w)
         ratio   = dw_from//dw_to
@@ -300,6 +301,7 @@ class DownConverter(Module):
 class UpConverter(Module):
     """UpConverter"""
     def __init__(self, master, slave):
+        print("DOWNCONVERTER")
         dw_from = len(master.dat_w)
         dw_to   = len(slave.dat_w)
         ratio   = dw_to//dw_from

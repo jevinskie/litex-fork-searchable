@@ -110,6 +110,9 @@ def _run_sim(build_name, as_root=False, interactive=True):
 
 
 class SimQuestaToolchain:
+    def __init__(self):
+        self.modelsim_tcl = ""
+
     def _add_clockers(self, soc, sim_config):
         clks = {}
         for mod in sim_config.modules:
@@ -120,6 +123,9 @@ class SimQuestaToolchain:
 
         for cd, params in clks.items():
             soc.submodules += SimClocker(soc.platform, cd, soc.platform.lookup_request(f"{cd}_clk"), params["freq_hz"], params["phase_deg"])
+
+    def add_modelsim_tcl_code(self, tcl_code):
+        self.modelsim_tcl += tcl_code
 
     def prefinalize(self, builder, verbose=False, **kwargs):
         self._add_clockers(builder.soc, kwargs["sim_config"])
@@ -174,6 +180,9 @@ class SimQuestaToolchain:
             inc_args = [f"+incdir+{d}" for d in platform.verilog_include_paths]
             vlog_args = [*defs_args, *inc_args]
             questa_flags = " ".join(vlog_args)
+
+            if self.modelsim_tcl:
+                tools.write_to_file("modelsim.tcl", self.modelsim_tcl)
 
             _generate_sim_variables(build_name,
                                     platform.sources,

@@ -151,7 +151,6 @@ class CommUARTTCP(CommUART):
                 if not len(rbuf):
                     self.close()
                     self.open()
-                    written = 0
                     remaining = len(data)
                     pos = 0
                     continue

@@ -122,6 +122,7 @@ static void read_handler(int fd, short event, void *arg)
     event_free(s->ev);
     s->ev = NULL;
   }
+  printf("serial2tcp got packet\n");
   for(i = 0; i < read_len; i++)
   {
     s->databuf[(s->data_start +  s->datalen ) % 2048] = buffer[i];
@@ -247,7 +248,8 @@ static int serial2tcp_tick(void *sess, uint64_t time_ps)
   *s->tx_ready = 1;
   if(s->fd && *s->tx_valid) {
     c = *s->tx;
-    if(-1 ==write(s->fd, &c, 1)) {
+    printf("serial2tcp write 0x%02x\n", (uint8_t)c);
+    if(-1 == write(s->fd, &c, 1)) {
       eprintf("Error writing on socket\n");
       ret = RC_ERROR;
       goto out;

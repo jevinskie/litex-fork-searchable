@@ -14,10 +14,12 @@ CFLAGS += -DLITEX_VPI -Wall -Wextra -fPIC -DTOPLEVEL=$(TOPLEVEL)
 # CFLAGS += -O0 -ggdb3
 CXXFLAGS := $(CFLAGS) -std=c++11 -Wno-missing-field-initializers
 
+IVL_INC_DIR_FLAGS := $(addprefix -I ,$(INC_DIR))
+
 all: $(TOPLEVEL) modules litex_vpi.vpi
 
 $(TOPLEVEL): $(VERILOG_SRCS) litex_vpi.vpi
-	iverilog $(IVERILOG_FLAGS) -L . -m litex_vpi -o $@ $(VERILOG_SRCS)
+	iverilog -g2005-sv $(IVL_INC_DIR_FLAGS) $(IVERILOG_FLAGS) -L . -m litex_vpi -o $@ $(VERILOG_SRCS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | mkdir
 	$(CC) $(CFLAGS) -c -o $@ $^

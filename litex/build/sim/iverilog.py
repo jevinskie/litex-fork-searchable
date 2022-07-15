@@ -32,16 +32,13 @@ def _generate_sim_config(config):
 def _generate_sim_variables(build_name, sources, include_paths,
                             opt_level, extra_mods, extra_mods_path, iverilog_flags=""):
     tapcfg_dir = get_data_mod("misc", "tapcfg").data_location
-    include = ""
-    for path in include_paths:
-        include += "-I"+path+" "
     content = f"""\
 TOPLEVEL := {build_name}
 OPT_LEVEL ?= {opt_level}
 IVERILOG_FLAGS ?= {iverilog_flags}
 VERILOG_SRCS := {" ".join([s[0] for s in sources])}
 SRC_DIR := {core_directory}
-INC_DIR := {include}
+INC_DIR := {" ".join(include_paths)}
 TAPCFG_DIRECTORY := {tapcfg_dir}
 """
 
@@ -163,12 +160,17 @@ class SimIcarusToolchain:
             _generate_sim_h(platform)
             generate_vpi_init_generated_cpp(build_name, platform)
 
+            defs_args = [f"-D{d}{f'={v}' if v is not None else ''}" \
+                            for d, v in platform.compiler_definitions.items()]
+            iverilog_flags = " ".join([*defs_args])
+
             _generate_sim_variables(build_name,
                                     platform.sources,
                                     platform.verilog_include_paths,
                                     opt_level,
                                     extra_mods,
-                                    extra_mods_path)
+                                    extra_mods_path,
+                                    iverilog_flags=iverilog_flags)
 
             # Generate sim config
             if sim_config:

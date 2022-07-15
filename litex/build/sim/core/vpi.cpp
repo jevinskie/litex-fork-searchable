@@ -1,7 +1,11 @@
 #undef NDEBUG
 #include <cassert>
 #include <cinttypes>
+#include <clocale>
+#include <csignal>
+#include <cstdio>
 #include <cstring>
+#include <ctime>
 
 #include "error.h"
 #include "modules.h"
@@ -32,12 +36,27 @@
 #define UNUSED_FUNC
 #endif
 
+// (C) OpenBSD https://github.com/openbsd/src/blob/master/sys/sys/time.h
+#define timespecsub(tsp, usp, vsp)                                                                 \
+    do {                                                                                           \
+        (vsp)->tv_sec  = (tsp)->tv_sec - (usp)->tv_sec;                                            \
+        (vsp)->tv_nsec = (tsp)->tv_nsec - (usp)->tv_nsec;                                          \
+        if ((vsp)->tv_nsec < 0) {                                                                  \
+            (vsp)->tv_sec--;                                                                       \
+            (vsp)->tv_nsec += 1000000000L;                                                         \
+        }                                                                                          \
+    } while (0)
+
 extern "C" session_list_s *sesslist;
 extern "C" void litex_vpi_signals_register_callbacks();
 extern "C" void litex_vpi_signals_writeback();
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
 static struct event *ev;
+
+static uint64_t num_sim_cycles;
+static uint64_t num_sys_cycles;
+static timespec start_time;
 
 UNUSED_FUNC static int signal_uint8_t_change_cb(struct t_cb_data *cbd) {
     *(uint8_t *)cbd->user_data = cbd->value->value.integer;
@@ -93,8 +112,24 @@ static void tick() {
 static void register_next_time_cb();
 
 static int next_time_cb(t_cb_data *cbd) {
+    static bool last_sys_clk;
+
     sim_time_ps = ((uint64_t)cbd->time->high << 32) | cbd->time->low;
+
+    bool sys_clk_rising = false;
+    bool sys_clk        = !!sig_vals.sys_clk;
+    if (!last_sys_clk && sys_clk && sim_time_ps) {
+        sys_clk_rising = true;
+    }
+    last_sys_clk = sys_clk;
+
     tick();
+
+    ++num_sim_cycles;
+    if (sys_clk_rising) {
+        ++num_sys_cycles;
+    }
+
     register_next_time_cb();
     return 0;
 }
@@ -108,6 +143,22 @@ static void register_next_time_cb() {
 void litex_sim_init(void **out) {
     UNUSED(out);
     litex_vpi_signals_register_callbacks();
+}
+
+static void perf_cb(int signal, short event, void *base) {
+    timespec now_time, diff_time;
+    assert(!clock_gettime(CLOCK_REALTIME, &now_time));
+    timespecsub(&now_time, &start_time, &diff_time);
+    double elapsed   = diff_time.tv_sec + ((double)diff_time.tv_nsec / 1000000000L);
+    char *old_locale = setlocale(LC_NUMERIC, nullptr);
+    assert(old_locale);
+    assert(setlocale(LC_NUMERIC, ""));
+    printf("Wall time: %.1f\n", elapsed);
+    double sim_hz = num_sim_cycles / elapsed;
+    printf("Sim Hz: %'.0f\n", sim_hz);
+    double sys_hz = num_sys_cycles / elapsed;
+    printf("Sys Hz: %'.0f\n", sys_hz);
+    assert(setlocale(LC_NUMERIC, old_locale));
 }
 
 static int end_of_sim_cb(t_cb_data *cbd) {
@@ -134,6 +185,14 @@ static int start_of_sim_cb(t_cb_data *cbd) {
     if (!base) {
         eprintf("Can't allocate base\n");
     }
+
+    // perf monitoring (^z)
+    assert(!clock_gettime(CLOCK_REALTIME, &start_time));
+    assert(!sigaction(SIGTSTP, nullptr, nullptr));
+    struct event *ev_perf = evsignal_new(base, SIGTSTP, perf_cb, event_self_cbarg());
+    assert(ev_perf);
+    int res = event_add(ev_perf, nullptr);
+    printf("ev_add res: %d\n", res);
 
     void *dummy_vsim;
     if (RC_OK != (ret = litex_sim_initialize_all(&dummy_vsim, base))) {

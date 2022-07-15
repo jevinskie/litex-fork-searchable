@@ -5,6 +5,7 @@
 # Copyright (c) 2022      Jevin Sweval <jevinsweval@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import select
 import socket
 
 import serial
@@ -112,10 +113,6 @@ class CommUARTTCP(CommUART):
             return
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.hostname, self.port))
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 1)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 1)
 
 
     def close(self):
@@ -131,12 +128,14 @@ class CommUARTTCP(CommUART):
             print(f"_read {length}")
         r = bytes()
         while len(r) < length:
+            select.select([self.socket], [], [])
             rbuf = self.socket.recv(length - len(r))
-            if self.debug:
-                print(f"_read recv {len(rbuf)}")
-            if not rbuf:
+            if rbuf == b"":
                 self.close()
                 self.open()
+                r = bytes()
+            if self.debug:
+                print(f"_read recv {len(rbuf)}")
             r += rbuf
         return r
 
@@ -146,14 +145,21 @@ class CommUARTTCP(CommUART):
         remaining = len(data)
         pos = 0
         while remaining:
-            written = 0
-            try:
-                written = self.socket.send(bytes(data[pos:]))
-                if self.debug:
-                    print(f"_write send {written}")
-            except BrokenPipeError:
-                self.close()
-                self.open()
+            rd_bufs, wr_bufs, _ = select.select([self.socket], [self.socket], [])
+            if len(rd_bufs):
+                rbuf = self.socket.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+                if not len(rbuf):
+                    self.close()
+                    self.open()
+                    written = 0
+                    remaining = len(data)
+                    pos = 0
+                    continue
+            if not len(wr_bufs):
+                continue
+            written = self.socket.send(bytes(data[pos:]))
+            if self.debug:
+                print(f"_write send {written}")
             remaining -= written
             pos += written
 

@@ -269,12 +269,17 @@ out:
   return ret;
 }
 
+static int serial2tcp_close(void *sess) {
+  struct session_s *s = (struct session_s*)sess;
+  return evutil_closesocket(s->fd) == 0 ? RC_OK : RC_ERROR;
+}
+
 static struct ext_module_s ext_mod = {
   "serial2tcp",
   serial2tcp_start,
   serial2tcp_new,
   serial2tcp_add_pads,
-  NULL,
+  serial2tcp_close,
   serial2tcp_tick
 };
 

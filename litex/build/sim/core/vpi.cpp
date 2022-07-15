@@ -12,7 +12,6 @@
 #include <event2/event.h>
 #include <vpi_user.h>
 
-
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -38,7 +37,6 @@ extern "C" void litex_vpi_signals_register_callbacks();
 extern "C" void litex_vpi_signals_writeback();
 
 static s_vpi_time nextsimtime{.type = vpiSimTime};
-static bool finished;
 static struct event *ev;
 
 UNUSED_FUNC static int signal_uint8_t_change_cb(struct t_cb_data *cbd) {
@@ -89,11 +87,6 @@ static void tick() {
             s->module->tick(s->session, sim_time_ps);
     }
 
-    if (finished) {
-        event_base_loopbreak(base);
-        return;
-    }
-
     register_rw_sync_cb();
 }
 
@@ -119,7 +112,12 @@ void litex_sim_init(void **out) {
 
 static int end_of_sim_cb(t_cb_data *cbd) {
     UNUSED(cbd);
-    finished = true;
+    for (auto *s = sesslist; s; s = s->next) {
+        if (s->module->close) {
+            s->module->close(s);
+        }
+    }
+    event_base_loopbreak(base);
     return 0;
 }
 

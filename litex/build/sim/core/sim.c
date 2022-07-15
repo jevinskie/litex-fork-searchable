@@ -198,8 +198,13 @@ static void cb(evutil_socket_t sock, short which, void *arg)
     sim_time_ps += timebase_ps;
 
     if (litex_sim_got_finish()) {
-        event_base_loopbreak(base);
-        break;
+      for (s = sesslist; s; s=s->next)
+      {
+        if (s->module->close)
+          s->module->close(s);
+      }
+      event_base_loopbreak(base);
+      break;
     }
   }
 

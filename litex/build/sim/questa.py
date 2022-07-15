@@ -107,7 +107,6 @@ def _run_sim(build_name, as_root=False, interactive=True):
 
 
     p = subprocess.Popen(["bash", run_script_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # print(f"p in: {p.stdin} out: {p.stdout} err: {p.stderr}")
     stdin_blocking = os.get_blocking(sys.stdin.fileno())
     os.set_blocking(sys.stdin.fileno(), False)
     os.set_blocking(p.stdout.fileno(), False)
@@ -116,8 +115,6 @@ def _run_sim(build_name, as_root=False, interactive=True):
     while p.poll() is None:
         try:
             rdy_rd, _, _ = select.select([sys.stdin.buffer, p.stdout, p.stderr], [], [])
-            if p.poll() is not None:
-                break
             if sys.stdin.buffer in rdy_rd:
                 ib = sys.stdin.buffer.read()
                 p.stdin.write(ib)

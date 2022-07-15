@@ -93,71 +93,60 @@ def _compile_sim(build_name, verbose):
 
 def _run_sim(build_name, as_root=False, interactive=True):
     run_script_contents = "#!/usr/bin/env bash\nset -e -u -x -o pipefail\n"
+    run_script_contents += "NOLDDTEST=1 "
     if which("litex_privesc") is not None:
         run_script_contents += "litex_privesc " if as_root else ""
     else:
         run_script_contents += "sudo " if as_root else ""
-    run_script_contents += f"NOLDDTEST=1 vsim -c {build_name}_opt -pli ./litex_vpi.so " \
-                            + "-no_autoacc -undefsyms=off -do \"run -a\"\n"
+    if which("stdbuf") is not None:
+        run_script_contents += "stdbuf -o L "
+    run_script_contents += f"vsim -c {build_name}_opt -pli ./litex_vpi.so " \
+                            + "-keepstdout -no_autoacc -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
 
 
     p = subprocess.Popen(["bash", run_script_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(f"p in: {p.stdin} out: {p.stdout} err: {p.stderr}")
+    # print(f"p in: {p.stdin} out: {p.stdout} err: {p.stderr}")
     stdin_blocking = os.get_blocking(sys.stdin.fileno())
     os.set_blocking(sys.stdin.fileno(), False)
     os.set_blocking(p.stdout.fileno(), False)
     os.set_blocking(p.stderr.fileno(), False)
+    last_kbint = None
     while p.poll() is None:
         try:
-            print("select")
             rdy_rd, _, _ = select.select([sys.stdin.buffer, p.stdout, p.stderr], [], [])
             if p.poll() is not None:
                 break
-            print(f"rd_rdy: {rdy_rd}")
             if sys.stdin.buffer in rdy_rd:
                 ib = sys.stdin.buffer.read()
-                print(f"stdin ib: {ib}")
                 p.stdin.write(ib)
                 p.stdin.flush()
             if p.stdout in rdy_rd:
                 ob = p.stdout.read()
-                print(f"stdout ob: {ob}")
                 sys.stdout.buffer.write(ob)
                 sys.stdout.buffer.flush()
             if p.stderr in rdy_rd:
                 ob = p.stderr.read()
-                print(f"stderr ob: {ob}")
                 sys.stderr.buffer.write(ob)
                 sys.stderr.buffer.flush()
-        except KeyboardInterrupt:
-            print(f"kb int, sleeping")
-            # time.sleep(10)
-            print("sleep done")
-            pass
+        except KeyboardInterrupt as e:
+            cur_time = time.time()
+            if last_kbint is not None and (cur_time - last_kbint) < 0.5:
+                p.stdin.close()
+                p.wait()
+                break
+            last_kbint = cur_time
+    stdout = p.stdout.read()
+    if stdout:
+        sys.stdout.buffer.write(stdout)
+        sys.stdout.buffer.flush()
+    stderr = p.stderr.read()
+    if stderr:
+        sys.stderr.buffer.write(stderr)
+        sys.stderr.buffer.flush()
     os.set_blocking(sys.stdin.fileno(), stdin_blocking)
-    #     try:
-    #         p.wait()
-    #     except KeyboardInterrupt:
-    #         print("caught sigint")
-    #         # p.send_signal(signal.SIGINT)
-    #         # p.stdin.close()
-    #         # time.sleep(10)
-    #         pass
 
-    # if sys.platform != "win32" and interactive:
-    #     import termios
-    #     termios_settings = termios.tcgetattr(sys.stdin.fileno())
-    # try:
-    #     r = subprocess.call(["bash", run_script_file])
-    #     if r != 0:
-    #         raise OSError("Subprocess failed")
-    # except:
-    #     pass
-    # if sys.platform != "win32" and interactive:
-    #     termios.tcsetattr(sys.stdin.fileno(), termios.TCSAFLUSH, termios_settings)
-    print("_run_sim done")
 
 class SimQuestaToolchain:
     def __init__(self):

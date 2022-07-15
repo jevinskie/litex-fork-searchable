@@ -98,33 +98,45 @@ def _run_sim(build_name, as_root=False, interactive=True):
     else:
         run_script_contents += "sudo " if as_root else ""
     run_script_contents += f"NOLDDTEST=1 vsim -c {build_name}_opt -pli ./litex_vpi.so " \
-                            + "-keepstdout  -no_autoacc -undefsyms=off -do \"run -a\"\n"
+                            + "-no_autoacc -undefsyms=off -do \"run -a\"\n"
     run_script_file = "run_" + build_name + ".sh"
     tools.write_to_file(run_script_file, run_script_contents, force_unix=True, chmod=0o755)
 
 
     p = subprocess.Popen(["bash", run_script_file], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     print(f"p in: {p.stdin} out: {p.stdout} err: {p.stderr}")
+    stdin_blocking = os.get_blocking(sys.stdin.fileno())
+    os.set_blocking(sys.stdin.fileno(), False)
     os.set_blocking(p.stdout.fileno(), False)
     os.set_blocking(p.stderr.fileno(), False)
     while p.poll() is None:
-        print("select")
-        rdy_rd, _, _ = select.select([sys.stdin.buffer, p.stdout, p.stderr], [], [])
-        if p.poll() is not None:
-            break
-        print(f"rd_rdy: {rdy_rd}")
-        if sys.stdin.buffer in rdy_rd:
-            ib = sys.stdin.buffer.read()
-            print(f"stdin ib: {ib}")
-            p.stdin.write(ib)
-        if p.stdout in rdy_rd:
-            ob = p.stdout.read()
-            print(f"stdout ob: {ob}")
-            sys.stdout.buffer.write(ob)
-        if p.stderr in rdy_rd:
-            ob = p.stderr.read()
-            print(f"stderr ob: {ob}")
-            sys.stderr.buffer.write(ob)
+        try:
+            print("select")
+            rdy_rd, _, _ = select.select([sys.stdin.buffer, p.stdout, p.stderr], [], [])
+            if p.poll() is not None:
+                break
+            print(f"rd_rdy: {rdy_rd}")
+            if sys.stdin.buffer in rdy_rd:
+                ib = sys.stdin.buffer.read()
+                print(f"stdin ib: {ib}")
+                p.stdin.write(ib)
+                p.stdin.flush()
+            if p.stdout in rdy_rd:
+                ob = p.stdout.read()
+                print(f"stdout ob: {ob}")
+                sys.stdout.buffer.write(ob)
+                sys.stdout.buffer.flush()
+            if p.stderr in rdy_rd:
+                ob = p.stderr.read()
+                print(f"stderr ob: {ob}")
+                sys.stderr.buffer.write(ob)
+                sys.stderr.buffer.flush()
+        except KeyboardInterrupt:
+            print(f"kb int, sleeping")
+            # time.sleep(10)
+            print("sleep done")
+            pass
+    os.set_blocking(sys.stdin.fileno(), stdin_blocking)
     #     try:
     #         p.wait()
     #     except KeyboardInterrupt:
